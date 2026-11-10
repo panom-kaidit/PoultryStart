@@ -6,6 +6,7 @@ const authenticate = require('../middleware/authenticate');
 const validate = require('../middleware/validate');
 const { loadFarmAccess, requirePermission } = require('../middleware/farmAccess');
 const { createFarmRules, updateFarmRules } = require('../validators/farmValidators');
+const memberRoutes = require('./memberRoutes');
 
 const router = express.Router();
 
@@ -27,5 +28,8 @@ router.patch('/:farmId',
 router.delete('/:farmId',
   loadFarmAccess, requirePermission('farm:delete'),
   farmController.deleteFarm);
+
+// Member routes
+router.use('/:farmId/members', loadFarmAccess, memberRoutes);
 
 module.exports = router;
