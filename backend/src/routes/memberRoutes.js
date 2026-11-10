@@ -1,6 +1,4 @@
-// Routes for /api/farms/:farmId/members (FR-03, BR-06)
-// Mounted in farmRoutes.js after authenticate and loadFarmAccess, so here
-// req.user, req.farm and req.membership are already available.
+// Routes for /api/farms/:farmId/members 
 const express = require('express');
 const memberController = require('../controllers/memberController');
 const validate = require('../middleware/validate');
