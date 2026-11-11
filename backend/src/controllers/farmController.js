@@ -4,8 +4,11 @@ const farmService = require('../services/farmService');
 const { sendSuccess } = require('../utils/response');
 
 function createFarm(req, res) {
-  const farm = farmService.createFarm(req.user.id, req.validated);
-  sendSuccess(res, 201, { farm }, 'Farm created successfully.');
+  const result = farmService.createFarm(req.user.id, req.validated);
+  const message = result.readinessAssessment
+    ? 'Farm created. The readiness assessment has started; you can stop and continue at any time.'
+    : 'Farm created. You can start the readiness assessment later from the farm dashboard.';
+  sendSuccess(res, 201, result, message);
 }
 
 function listFarms(req, res) {
@@ -14,13 +17,12 @@ function listFarms(req, res) {
 }
 
 function getFarm(req, res) {
-  const farm = farmService.getFarm(req.farm, req.membership);
-  sendSuccess(res, 200, { farm });
+  sendSuccess(res, 200, farmService.getFarm(req.farm, req.membership));
 }
 
 function updateFarm(req, res) {
-  const farm = farmService.updateFarm(req.farm.id, req.validated, req.membership);
-  sendSuccess(res, 200, { farm }, 'Farm updated successfully.');
+  const result = farmService.updateFarm(req.farm, req.validated, req.membership);
+  sendSuccess(res, 200, result, 'Farm updated successfully.');
 }
 
 function deleteFarm(req, res) {
