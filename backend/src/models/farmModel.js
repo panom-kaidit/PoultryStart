@@ -11,6 +11,12 @@ const WRITABLE_FIELDS = {
   farmSize: 'farm_size',
   managementMode: 'management_mode',
   currency: 'currency',
+  startingStage: 'starting_stage',
+  startingAgeWeeks: 'starting_age_weeks',
+  houseStatus: 'house_status',
+  houseLengthM: 'house_length_m',
+  houseWidthM: 'house_width_m',
+  nonUsableAreaM2: 'non_usable_area_m2',
 };
 
 function toFarm(row) {
@@ -26,6 +32,13 @@ function toFarm(row) {
     farmSize: row.farm_size,
     managementMode: row.management_mode,
     currency: row.currency,
+    // Poultry house measurements
+    startingStage: row.starting_stage || 'day_old', 
+    startingAgeWeeks: row.starting_age_weeks, 
+    houseStatus: row.house_status, 
+    houseLengthM: row.house_length_m,
+    houseWidthM: row.house_width_m,
+    nonUsableAreaM2: row.non_usable_area_m2,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

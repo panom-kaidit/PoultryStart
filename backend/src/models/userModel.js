@@ -1,10 +1,7 @@
 // Database operations for the "users" table.
-// All queries use "?" placeholders (prepared statements), so user input is
-// never pasted into SQL. This prevents SQL injection.
 const { getDb } = require('../config/database');
 
 // Converts a database row into the object the API returns.
-// The password hash is deliberately NOT included (NFR-07).
 function toPublicUser(row) {
   if (!row) return null;
   return {
@@ -27,8 +24,7 @@ function findById(id) {
   return toPublicUser(row);
 }
 
-// Returns the full row INCLUDING password_hash. Only the login service
-// should use this, to compare the password. Never send it in a response.
+// Returns the full row INCLUDING password_hash.
 function findByEmailWithPassword(email) {
   return getDb().prepare('SELECT * FROM users WHERE email = ?').get(email) || null;
 }
