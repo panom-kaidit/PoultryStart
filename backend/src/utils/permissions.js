@@ -25,7 +25,9 @@ const PERMISSIONS = Object.freeze({
 
   // Flocks, Workers can view so they can pick a flock when recording.
   'flocks:view': ALL_ROLES,
-  'flocks:manage': OWNER_AND_MANAGER,
+  'flocks:manage': OWNER_AND_MANAGER, // incl. culling, sales, transfers, additions, corrections
+  // Daily mortality: everyone who looks after the birds (approved D8).
+  'flocks:record_mortality': ALL_ROLES,
 
   // Daily tasks
   'tasks:view': ALL_ROLES,

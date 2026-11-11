@@ -49,20 +49,54 @@ function farmRules({ isUpdate }) {
       .trim()
       .toUpperCase()
       .matches(/^[A-Z]{3}$/).withMessage('Currency must be a 3-letter code such as UGX.'),
+
+    body('startingStage')
+      .optional()
+      .isIn(['day_old', 'pullet', 'point_of_lay'])
+      .withMessage('Starting stage must be "day_old", "pullet" or "point_of_lay".'),
+    body('startingAgeWeeks')
+      .optional({ values: 'null' })
+      .isInt({ min: 0, max: 100 }).withMessage('Starting age must be a whole number of weeks.')
+      .toInt(),
+    body('houseStatus')
+      .optional({ values: 'null' })
+      .isIn(['existing', 'not_built'])
+      .withMessage('House status must be "existing" or "not_built".'),
+    body('houseLengthM')
+      .optional({ values: 'null' })
+      .isFloat({ gt: 0, max: 500 }).withMessage('House length must be a number of metres above 0 and at most 500.')
+      .toFloat(),
+    body('houseWidthM')
+      .optional({ values: 'null' })
+      .isFloat({ gt: 0, max: 500 }).withMessage('House width must be a number of metres above 0 and at most 500.')
+      .toFloat(),
+    body('nonUsableAreaM2')
+      .optional({ values: 'null' })
+      .isFloat({ min: 0, max: 250000 })
+      .withMessage('Non-usable area (stores, passages) must be a number of square metres, 0 or more.')
+      .toFloat(),
   ];
 }
+
+// Farm creation only
+const startAssessmentRule = body('startAssessment')
+  .optional()
+  .custom((value) => {
+    if (typeof value !== 'boolean') throw new Error('startAssessment must be true or false.');
+    return true;
+  });
 
 // For updates: reject an empty request body.
 const atLeastOneField = body().custom((value) => {
   const allowed = ['name', 'location', 'poultryType', 'numberOfBirds', 'experienceLevel',
-    'farmSize', 'managementMode', 'currency'];
+    'farmSize', 'managementMode', 'currency', 'startingStage', 'startingAgeWeeks', 'houseStatus', 'houseLengthM', 'houseWidthM', 'nonUsableAreaM2'];
   if (!value || !allowed.some((key) => key in value)) {
     throw new Error(`Send at least one field to update: ${allowed.join(', ')}.`);
   }
   return true;
 });
 
-const createFarmRules = farmRules({ isUpdate: false });
+const createFarmRules = [...farmRules({ isUpdate: false }), startAssessmentRule];
 const updateFarmRules = [atLeastOneField, ...farmRules({ isUpdate: true })];
 
 module.exports = { createFarmRules, updateFarmRules };

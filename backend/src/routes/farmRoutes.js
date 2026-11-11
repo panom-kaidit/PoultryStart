@@ -7,6 +7,9 @@ const validate = require('../middleware/validate');
 const { loadFarmAccess, requirePermission } = require('../middleware/farmAccess');
 const { createFarmRules, updateFarmRules } = require('../validators/farmValidators');
 const memberRoutes = require('./memberRoutes');
+const readinessRoutes = require('./readinessRoutes');
+const flockRoutes = require('./flockRoutes');
+const taskRoutes = require('./taskRoutes');
 
 const router = express.Router();
 
@@ -31,5 +34,8 @@ router.delete('/:farmId',
 
 // Member routes
 router.use('/:farmId/members', loadFarmAccess, memberRoutes);
+router.use('/:farmId/readiness', loadFarmAccess, readinessRoutes);
+router.use('/:farmId/flocks', loadFarmAccess, flockRoutes);
+router.use('/:farmId/tasks', loadFarmAccess, taskRoutes);
 
 module.exports = router;
