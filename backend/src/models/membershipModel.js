@@ -18,7 +18,7 @@ function toMembership(row) {
 function toMember(row) {
   if (!row) return null;
   return {
-    id: row.id, // membership ID, used in /members/:memberId
+    id: row.id,
     userId: row.user_id,
     name: row.name,
     email: row.email,
