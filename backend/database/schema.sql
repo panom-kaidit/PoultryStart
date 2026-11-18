@@ -382,6 +382,320 @@ BEGIN
 END;
 -- DailyTaskSupport (end)
 
+-- ProductionRecords :
+CREATE TABLE IF NOT EXISTS weight_records (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  farm_id          INTEGER NOT NULL,
+  flock_id         INTEGER NOT NULL,
+  record_date      TEXT    NOT NULL CHECK (record_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  method           TEXT    NOT NULL CHECK (method IN ('individual', 'aggregate')),
+  sample_size      INTEGER NOT NULL CHECK (sample_size > 0),
+  average_weight_g REAL    NOT NULL CHECK (average_weight_g > 0),
+  min_weight_g     REAL    CHECK (min_weight_g IS NULL OR min_weight_g > 0),
+  max_weight_g     REAL    CHECK (max_weight_g IS NULL OR max_weight_g > 0),
+  sample_weights_g TEXT    CHECK (sample_weights_g IS NULL OR json_valid(sample_weights_g)),
+  entered_unit           TEXT CHECK (entered_unit IS NULL OR entered_unit IN ('g', 'kg')),
+  entered_weights        TEXT CHECK (entered_weights IS NULL OR json_valid(entered_weights)),
+  entered_average_weight REAL CHECK (entered_average_weight IS NULL OR entered_average_weight > 0),
+  notes            TEXT,
+  version          INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
+  created_by       INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at       TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (flock_id, farm_id) REFERENCES flocks(id, farm_id) ON DELETE CASCADE,
+  -- Individual weights only with the individual method, and then min and max are known.
+  CHECK ((method = 'individual') = (sample_weights_g IS NOT NULL)),
+  CHECK (method = 'aggregate' OR (min_weight_g IS NOT NULL AND max_weight_g IS NOT NULL)),
+  CHECK (min_weight_g IS NULL OR max_weight_g IS NULL OR min_weight_g <= max_weight_g)
+);
+CREATE INDEX IF NOT EXISTS idx_weight_records_flock_date ON weight_records(flock_id, record_date);
+CREATE INDEX IF NOT EXISTS idx_weight_records_farm_date  ON weight_records(farm_id, record_date);
+
+-- Egg collections:
+CREATE TABLE IF NOT EXISTS egg_collection_records (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  farm_id           INTEGER NOT NULL,
+  flock_id          INTEGER NOT NULL,
+  record_date       TEXT    NOT NULL CHECK (record_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  collection_period TEXT    NOT NULL CHECK (collection_period IN ('morning', 'midday', 'evening', 'extra')),
+  good_eggs         INTEGER NOT NULL DEFAULT 0 CHECK (good_eggs >= 0),
+  second_grade_eggs INTEGER NOT NULL DEFAULT 0 CHECK (second_grade_eggs >= 0),
+  floor_eggs        INTEGER NOT NULL DEFAULT 0 CHECK (floor_eggs >= 0),
+  notes             TEXT,
+  version           INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
+  created_by        INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at        TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (flock_id, farm_id) REFERENCES flocks(id, farm_id) ON DELETE CASCADE
+);
+-- One record per collection period per day (no duplicate submissions).
+CREATE UNIQUE INDEX IF NOT EXISTS ux_egg_records_period ON egg_collection_records(flock_id, record_date, collection_period);
+CREATE INDEX IF NOT EXISTS idx_egg_records_farm_date ON egg_collection_records(farm_id, record_date);
+
+-- Feed consumption:
+CREATE TABLE IF NOT EXISTS feed_consumption_records (
+  id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+  farm_id            INTEGER NOT NULL,
+  flock_id           INTEGER NOT NULL,
+  record_date        TEXT    NOT NULL CHECK (record_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  feed_stage         TEXT    NOT NULL DEFAULT 'unknown'
+                     CHECK (feed_stage IN ('starter', 'grower', 'finisher', 'pre_lay', 'layer', 'other', 'unknown')),
+  quantity_kg        REAL    NOT NULL CHECK (quantity_kg > 0),
+  entered_quantity   REAL    NOT NULL CHECK (entered_quantity > 0),
+  entered_unit       TEXT    NOT NULL CHECK (entered_unit IN ('kg', 'g')),
+  measurement_method TEXT    NOT NULL CHECK (measurement_method IN ('measured', 'estimated')),
+  notes              TEXT,
+  version            INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
+  created_by         INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at         TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (flock_id, farm_id) REFERENCES flocks(id, farm_id) ON DELETE CASCADE
+);
+-- One record per flock, day and feed stage (no duplicate submissions).
+CREATE UNIQUE INDEX IF NOT EXISTS ux_feed_records_day_stage ON feed_consumption_records(flock_id, record_date, feed_stage);
+CREATE INDEX IF NOT EXISTS idx_feed_records_farm_date ON feed_consumption_records(farm_id, record_date);
+
+-- Drinking-water consumption:
+CREATE TABLE IF NOT EXISTS water_consumption_records (
+  id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+  farm_id            INTEGER NOT NULL,
+  flock_id           INTEGER NOT NULL,
+  record_date        TEXT    NOT NULL CHECK (record_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  quantity_litres    REAL    NOT NULL CHECK (quantity_litres > 0),
+  entered_quantity   REAL    NOT NULL CHECK (entered_quantity > 0),
+  entered_unit       TEXT    NOT NULL CHECK (entered_unit IN ('L', 'ml')),
+  measurement_method TEXT    NOT NULL CHECK (measurement_method IN ('measured', 'estimated')),
+  notes              TEXT,
+  version            INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
+  created_by         INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at         TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (flock_id, farm_id) REFERENCES flocks(id, farm_id) ON DELETE CASCADE
+);
+-- One record per flock and day.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_water_records_day ON water_consumption_records(flock_id, record_date);
+CREATE INDEX IF NOT EXISTS idx_water_records_farm_date ON water_consumption_records(farm_id, record_date);
+
+
+CREATE TABLE IF NOT EXISTS production_record_corrections (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  farm_id      INTEGER NOT NULL,
+  flock_id     INTEGER NOT NULL,
+  record_type  TEXT    NOT NULL CHECK (record_type IN ('weight', 'eggs', 'feed', 'water')),
+  record_id    INTEGER NOT NULL,
+  version_from INTEGER NOT NULL CHECK (version_from >= 1),
+  version_to   INTEGER NOT NULL CHECK (version_to = version_from + 1),
+  changes      TEXT    NOT NULL CHECK (json_valid(changes)),   -- { field: { from, to } }
+  reason       TEXT    NOT NULL CHECK (length(trim(reason)) > 0),
+  corrected_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (flock_id, farm_id) REFERENCES flocks(id, farm_id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_record_corrections_version ON production_record_corrections(record_type, record_id, version_to);
+
+-- Triggers hold no data, so they are dropped and re-created on every start.
+
+DROP TRIGGER IF EXISTS trg_weight_records_corrections_only;
+CREATE TRIGGER trg_weight_records_corrections_only BEFORE UPDATE ON weight_records
+WHEN NEW.version <> OLD.version + 1 OR NEW.farm_id <> OLD.farm_id OR NEW.flock_id <> OLD.flock_id OR NEW.created_at <> OLD.created_at
+  OR NOT EXISTS (SELECT 1 FROM production_record_corrections c WHERE c.record_type = 'weight' AND c.record_id = OLD.id AND c.version_to = NEW.version)
+BEGIN SELECT RAISE(ABORT, 'Production records can only be changed through a correction with a reason.'); END;
+DROP TRIGGER IF EXISTS trg_weight_records_no_delete;
+CREATE TRIGGER trg_weight_records_no_delete BEFORE DELETE ON weight_records
+WHEN EXISTS (SELECT 1 FROM farms WHERE id = OLD.farm_id)
+BEGIN SELECT RAISE(ABORT, 'Production records cannot be deleted. Record a correction instead.'); END;
+
+DROP TRIGGER IF EXISTS trg_egg_records_corrections_only;
+CREATE TRIGGER trg_egg_records_corrections_only BEFORE UPDATE ON egg_collection_records
+WHEN NEW.version <> OLD.version + 1 OR NEW.farm_id <> OLD.farm_id OR NEW.flock_id <> OLD.flock_id OR NEW.created_at <> OLD.created_at
+  OR NOT EXISTS (SELECT 1 FROM production_record_corrections c WHERE c.record_type = 'eggs' AND c.record_id = OLD.id AND c.version_to = NEW.version)
+BEGIN SELECT RAISE(ABORT, 'Production records can only be changed through a correction with a reason.'); END;
+DROP TRIGGER IF EXISTS trg_egg_records_no_delete;
+CREATE TRIGGER trg_egg_records_no_delete BEFORE DELETE ON egg_collection_records
+WHEN EXISTS (SELECT 1 FROM farms WHERE id = OLD.farm_id)
+BEGIN SELECT RAISE(ABORT, 'Production records cannot be deleted. Record a correction instead.'); END;
+
+-- Feed consumption: a day cannot have both an unknown-stage feed record and named-stage feed records.
+DROP TRIGGER IF EXISTS trg_feed_records_stage_exclusive_insert;
+CREATE TRIGGER trg_feed_records_stage_exclusive_insert BEFORE INSERT ON feed_consumption_records
+WHEN EXISTS (SELECT 1 FROM feed_consumption_records o WHERE o.flock_id = NEW.flock_id AND o.record_date = NEW.record_date
+             AND (o.feed_stage = 'unknown') <> (NEW.feed_stage = 'unknown'))
+BEGIN SELECT RAISE(ABORT, 'A day cannot have both an unknown-stage feed record and named-stage feed records.'); END;
+DROP TRIGGER IF EXISTS trg_feed_records_stage_exclusive_update;
+CREATE TRIGGER trg_feed_records_stage_exclusive_update BEFORE UPDATE OF feed_stage, record_date ON feed_consumption_records
+WHEN EXISTS (SELECT 1 FROM feed_consumption_records o WHERE o.flock_id = NEW.flock_id AND o.record_date = NEW.record_date
+             AND o.id <> NEW.id AND (o.feed_stage = 'unknown') <> (NEW.feed_stage = 'unknown'))
+BEGIN SELECT RAISE(ABORT, 'A day cannot have both an unknown-stage feed record and named-stage feed records.'); END;
+
+DROP TRIGGER IF EXISTS trg_feed_records_corrections_only;
+CREATE TRIGGER trg_feed_records_corrections_only BEFORE UPDATE ON feed_consumption_records
+WHEN NEW.version <> OLD.version + 1 OR NEW.farm_id <> OLD.farm_id OR NEW.flock_id <> OLD.flock_id OR NEW.created_at <> OLD.created_at
+  OR NOT EXISTS (SELECT 1 FROM production_record_corrections c WHERE c.record_type = 'feed' AND c.record_id = OLD.id AND c.version_to = NEW.version)
+BEGIN SELECT RAISE(ABORT, 'Production records can only be changed through a correction with a reason.'); END;
+DROP TRIGGER IF EXISTS trg_feed_records_no_delete;
+CREATE TRIGGER trg_feed_records_no_delete BEFORE DELETE ON feed_consumption_records
+WHEN EXISTS (SELECT 1 FROM farms WHERE id = OLD.farm_id)
+BEGIN SELECT RAISE(ABORT, 'Production records cannot be deleted. Record a correction instead.'); END;
+
+DROP TRIGGER IF EXISTS trg_water_records_corrections_only;
+CREATE TRIGGER trg_water_records_corrections_only BEFORE UPDATE ON water_consumption_records
+WHEN NEW.version <> OLD.version + 1 OR NEW.farm_id <> OLD.farm_id OR NEW.flock_id <> OLD.flock_id OR NEW.created_at <> OLD.created_at
+  OR NOT EXISTS (SELECT 1 FROM production_record_corrections c WHERE c.record_type = 'water' AND c.record_id = OLD.id AND c.version_to = NEW.version)
+BEGIN SELECT RAISE(ABORT, 'Production records can only be changed through a correction with a reason.'); END;
+DROP TRIGGER IF EXISTS trg_water_records_no_delete;
+CREATE TRIGGER trg_water_records_no_delete BEFORE DELETE ON water_consumption_records
+WHEN EXISTS (SELECT 1 FROM farms WHERE id = OLD.farm_id)
+BEGIN SELECT RAISE(ABORT, 'Production records cannot be deleted. Record a correction instead.'); END;
+
+-- Correction history: never edited, never deleted while its farm exists.
+DROP TRIGGER IF EXISTS trg_record_corrections_no_update;
+CREATE TRIGGER trg_record_corrections_no_update BEFORE UPDATE ON production_record_corrections
+BEGIN SELECT RAISE(ABORT, 'Correction history cannot be edited.'); END;
+DROP TRIGGER IF EXISTS trg_record_corrections_no_delete;
+CREATE TRIGGER trg_record_corrections_no_delete BEFORE DELETE ON production_record_corrections
+WHEN EXISTS (SELECT 1 FROM farms WHERE id = OLD.farm_id)
+BEGIN SELECT RAISE(ABORT, 'Correction history cannot be deleted.'); END;
+-- ProductionRecords (end)
+
+-- HealthObservations 
+CREATE TABLE IF NOT EXISTS health_observations (
+  id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+  farm_id                     INTEGER NOT NULL,
+  flock_id                    INTEGER NOT NULL,
+  observation_date            TEXT    NOT NULL CHECK (observation_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  -- What was noticed, in the farmer's own words (free text, no symptom codes).
+  observation                 TEXT    NOT NULL CHECK (length(trim(observation)) > 0 AND length(observation) <= 1000),
+  -- Optional: NULL means the birds were not counted.
+  birds_affected              INTEGER CHECK (birds_affected IS NULL OR birds_affected >= 1),
+  action_taken                TEXT    CHECK (action_taken IS NULL OR (length(trim(action_taken)) > 0 AND length(action_taken) <= 1000)),
+  vet_contacted               INTEGER NOT NULL DEFAULT 0 CHECK (vet_contacted IN (0, 1)),
+  extension_officer_contacted INTEGER NOT NULL DEFAULT 0 CHECK (extension_officer_contacted IN (0, 1)),
+  version                     INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
+  created_by                  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at                  TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at                  TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (flock_id, farm_id) REFERENCES flocks(id, farm_id) ON DELETE CASCADE
+);
+-- Several observations per flock and day are allowed (no unique index).
+CREATE INDEX IF NOT EXISTS idx_health_observations_flock_date ON health_observations(flock_id, observation_date);
+CREATE INDEX IF NOT EXISTS idx_health_observations_farm_date  ON health_observations(farm_id, observation_date);
+
+CREATE TABLE IF NOT EXISTS health_observation_corrections (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  farm_id        INTEGER NOT NULL,
+  flock_id       INTEGER NOT NULL,
+  observation_id INTEGER NOT NULL REFERENCES health_observations(id) ON DELETE CASCADE,
+  version_from   INTEGER NOT NULL CHECK (version_from >= 1),
+  version_to     INTEGER NOT NULL CHECK (version_to = version_from + 1),
+  changes        TEXT    NOT NULL CHECK (json_valid(changes)),   -- { field: { from, to } }
+  reason         TEXT    NOT NULL CHECK (length(trim(reason)) > 0),
+  corrected_by   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at     TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (flock_id, farm_id) REFERENCES flocks(id, farm_id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_health_corrections_version ON health_observation_corrections(observation_id, version_to);
+
+-- Observations:
+DROP TRIGGER IF EXISTS trg_health_observations_corrections_only;
+CREATE TRIGGER trg_health_observations_corrections_only BEFORE UPDATE ON health_observations
+WHEN NEW.version <> OLD.version + 1 OR NEW.farm_id <> OLD.farm_id OR NEW.flock_id <> OLD.flock_id OR NEW.created_at <> OLD.created_at
+  OR NOT EXISTS (SELECT 1 FROM health_observation_corrections c WHERE c.observation_id = OLD.id AND c.version_to = NEW.version)
+BEGIN SELECT RAISE(ABORT, 'Health observations can only be changed through a correction with a reason.'); END;
+DROP TRIGGER IF EXISTS trg_health_observations_no_delete;
+CREATE TRIGGER trg_health_observations_no_delete BEFORE DELETE ON health_observations
+WHEN EXISTS (SELECT 1 FROM farms WHERE id = OLD.farm_id)
+BEGIN SELECT RAISE(ABORT, 'Health observations cannot be deleted. Record a correction instead.'); END;
+
+-- A correction belongs to the same farm and flock as its observation.
+DROP TRIGGER IF EXISTS trg_health_corrections_same_flock;
+CREATE TRIGGER trg_health_corrections_same_flock BEFORE INSERT ON health_observation_corrections
+WHEN NOT EXISTS (SELECT 1 FROM health_observations o WHERE o.id = NEW.observation_id AND o.farm_id = NEW.farm_id AND o.flock_id = NEW.flock_id)
+BEGIN SELECT RAISE(ABORT, 'A correction must belong to the same farm and flock as its health observation.'); END;
+
+-- Correction history: never edited, never deleted while its farm exists.
+DROP TRIGGER IF EXISTS trg_health_corrections_no_update;
+CREATE TRIGGER trg_health_corrections_no_update BEFORE UPDATE ON health_observation_corrections
+BEGIN SELECT RAISE(ABORT, 'Correction history cannot be edited.'); END;
+DROP TRIGGER IF EXISTS trg_health_corrections_no_delete;
+CREATE TRIGGER trg_health_corrections_no_delete BEFORE DELETE ON health_observation_corrections
+WHEN EXISTS (SELECT 1 FROM farms WHERE id = OLD.farm_id)
+BEGIN SELECT RAISE(ABORT, 'Correction history cannot be deleted.'); END;
+-- HealthObservations (end)
+
+-- Expenses
+CREATE TABLE IF NOT EXISTS farm_expenses (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  farm_id           INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  flock_id          INTEGER,
+  expense_date      TEXT    NOT NULL CHECK (expense_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  category          TEXT    NOT NULL CHECK (category IN ('feed', 'chicks', 'medication', 'equipment', 'labour', 'transport', 'other')),
+  amount            INTEGER NOT NULL CHECK (amount > 0),   -- whole units of currency
+  currency          TEXT    NOT NULL CHECK (currency GLOB '[A-Z][A-Z][A-Z]'),
+  description       TEXT    NOT NULL CHECK (length(trim(description)) > 0),
+  voided            INTEGER NOT NULL DEFAULT 0 CHECK (voided IN (0, 1)),
+  void_reason       TEXT,
+  voided_by         INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  voided_at         TEXT,
+  legacy_expense_id INTEGER UNIQUE,                         -- expense_records.id it was copied from
+  version           INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
+  created_by        INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at        TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (flock_id, farm_id) REFERENCES flocks(id, farm_id) ON DELETE CASCADE,
+  -- A voided expense has its reason and time; an active one has neither.
+  CHECK ((voided = 1) = (void_reason IS NOT NULL AND length(trim(void_reason)) > 0 AND voided_at IS NOT NULL)),
+  CHECK (voided = 1 OR voided_by IS NULL)
+);
+CREATE INDEX IF NOT EXISTS idx_farm_expenses_farm_date ON farm_expenses(farm_id, expense_date);
+CREATE INDEX IF NOT EXISTS idx_farm_expenses_flock     ON farm_expenses(flock_id);
+CREATE INDEX IF NOT EXISTS idx_farm_expenses_category  ON farm_expenses(farm_id, category);
+
+-- Correction history of expenses (including voiding).
+CREATE TABLE IF NOT EXISTS expense_corrections (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  farm_id      INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  expense_id   INTEGER NOT NULL REFERENCES farm_expenses(id) ON DELETE CASCADE,
+  version_from INTEGER NOT NULL CHECK (version_from >= 1),
+  version_to   INTEGER NOT NULL CHECK (version_to = version_from + 1),
+  changes      TEXT    NOT NULL CHECK (json_valid(changes)),   -- { field: { from, to } }
+  reason       TEXT    NOT NULL CHECK (length(trim(reason)) > 0),
+  corrected_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_expense_corrections_version ON expense_corrections(expense_id, version_to);
+
+-- Expenses:
+DROP TRIGGER IF EXISTS trg_farm_expenses_corrections_only;
+CREATE TRIGGER trg_farm_expenses_corrections_only BEFORE UPDATE ON farm_expenses
+WHEN NEW.version <> OLD.version + 1 OR NEW.farm_id <> OLD.farm_id OR NEW.currency <> OLD.currency
+  OR NEW.created_at <> OLD.created_at OR NEW.legacy_expense_id IS NOT OLD.legacy_expense_id
+  OR NOT EXISTS (SELECT 1 FROM expense_corrections c WHERE c.expense_id = OLD.id AND c.version_to = NEW.version)
+BEGIN SELECT RAISE(ABORT, 'Expenses can only be changed through a correction with a reason, and their currency never changes.'); END;
+DROP TRIGGER IF EXISTS trg_farm_expenses_no_unvoid;
+CREATE TRIGGER trg_farm_expenses_no_unvoid BEFORE UPDATE OF voided ON farm_expenses
+WHEN OLD.voided = 1 AND NEW.voided = 0
+BEGIN SELECT RAISE(ABORT, 'A voided expense cannot be un-voided.'); END;
+DROP TRIGGER IF EXISTS trg_farm_expenses_no_delete;
+CREATE TRIGGER trg_farm_expenses_no_delete BEFORE DELETE ON farm_expenses
+WHEN EXISTS (SELECT 1 FROM farms WHERE id = OLD.farm_id)
+BEGIN SELECT RAISE(ABORT, 'Expenses cannot be deleted. Void the expense with a correction instead.'); END;
+
+-- A correction belongs to the same farm as its expense.
+DROP TRIGGER IF EXISTS trg_expense_corrections_same_farm;
+CREATE TRIGGER trg_expense_corrections_same_farm BEFORE INSERT ON expense_corrections
+WHEN NOT EXISTS (SELECT 1 FROM farm_expenses e WHERE e.id = NEW.expense_id AND e.farm_id = NEW.farm_id)
+BEGIN SELECT RAISE(ABORT, 'A correction must belong to the same farm as its expense.'); END;
+
+-- Correction history: never edited, never deleted while its farm exists.
+DROP TRIGGER IF EXISTS trg_expense_corrections_no_update;
+CREATE TRIGGER trg_expense_corrections_no_update BEFORE UPDATE ON expense_corrections
+BEGIN SELECT RAISE(ABORT, 'Correction history cannot be edited.'); END;
+DROP TRIGGER IF EXISTS trg_expense_corrections_no_delete;
+CREATE TRIGGER trg_expense_corrections_no_delete BEFORE DELETE ON expense_corrections
+WHEN EXISTS (SELECT 1 FROM farms WHERE id = OLD.farm_id)
+BEGIN SELECT RAISE(ABORT, 'Correction history cannot be deleted.'); END;
+-- Expenses (end)
+
 
 CREATE TABLE IF NOT EXISTS farm_activity_records (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -433,8 +747,27 @@ CREATE TABLE IF NOT EXISTS poultry_guidance (
   content      TEXT    NOT NULL,
   source       TEXT    NOT NULL,
   created_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  -- Poultry Guidance module 
+  code               TEXT,                     
+  summary            TEXT,
+  stages             TEXT CHECK (stages IS NULL OR json_valid(stages)),         
+  steps              TEXT CHECK (steps IS NULL OR json_valid(steps)),
+  key_values         TEXT CHECK (key_values IS NULL OR json_valid(key_values)),  
+  notice             TEXT,                       
+  evidence_labels    TEXT CHECK (evidence_labels IS NULL OR json_valid(evidence_labels)),
+  sources            TEXT CHECK (sources IS NULL OR json_valid(sources)),
+  source_differences TEXT,
+  strain_note        TEXT,                       
+  referral           TEXT,
+  related_codes      TEXT CHECK (related_codes IS NULL OR json_valid(related_codes)),
+  keywords           TEXT CHECK (keywords IS NULL OR json_valid(keywords)),
+  content_version    INTEGER CHECK (content_version IS NULL OR content_version >= 1),
+  reviewed_on        TEXT,
+  is_active          INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+  sort_order         INTEGER
 );
+CREATE UNIQUE INDEX IF NOT EXISTS ux_poultry_guidance_code ON poultry_guidance(code);
 
 -- Indexes: speed up the most common lookups (records for one farm)
 
