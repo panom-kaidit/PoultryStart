@@ -5,6 +5,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 const config = require('./env');
 const { READINESS_QUESTIONS } = require('../data/readinessContent');
+const { guidanceRows } = require('../data/guidanceContent');
 
 const BACKEND_ROOT = path.join(__dirname, '..', '..');
 const SCHEMA_FILE = path.join(BACKEND_ROOT, 'database', 'schema.sql');
@@ -25,7 +26,9 @@ function getDb() {
   runMigrations(db);
   db.exec(fs.readFileSync(SCHEMA_FILE, 'utf8'));
   backfillFlockMovements(db);
+  copyLegacyExpenses(db);
   syncReadinessQuestions(db);
+  syncGuidance(db);
   return db;
 }
 
@@ -128,6 +131,28 @@ const MIGRATIONS = [
     definition: "TEXT CHECK (first_egg_date IS NULL OR (poultry_type = 'layer' AND first_egg_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND first_egg_date >= start_date))" },
   { table: 'flocks', column: 'expected_sale_date',
     definition: "TEXT CHECK (expected_sale_date IS NULL OR (poultry_type = 'broiler' AND expected_sale_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND expected_sale_date >= start_date))" },
+
+  { table: 'weight_records', column: 'entered_unit', definition: "TEXT CHECK (entered_unit IS NULL OR entered_unit IN ('g', 'kg'))" },
+  { table: 'weight_records', column: 'entered_weights', definition: 'TEXT CHECK (entered_weights IS NULL OR json_valid(entered_weights))' },
+  { table: 'weight_records', column: 'entered_average_weight', definition: 'REAL CHECK (entered_average_weight IS NULL OR entered_average_weight > 0)' },
+
+  { table: 'poultry_guidance', column: 'code', definition: 'TEXT' },
+  { table: 'poultry_guidance', column: 'summary', definition: 'TEXT' },
+  { table: 'poultry_guidance', column: 'stages', definition: 'TEXT CHECK (stages IS NULL OR json_valid(stages))' },
+  { table: 'poultry_guidance', column: 'steps', definition: 'TEXT CHECK (steps IS NULL OR json_valid(steps))' },
+  { table: 'poultry_guidance', column: 'key_values', definition: 'TEXT CHECK (key_values IS NULL OR json_valid(key_values))' },
+  { table: 'poultry_guidance', column: 'notice', definition: 'TEXT' },
+  { table: 'poultry_guidance', column: 'evidence_labels', definition: 'TEXT CHECK (evidence_labels IS NULL OR json_valid(evidence_labels))' },
+  { table: 'poultry_guidance', column: 'sources', definition: 'TEXT CHECK (sources IS NULL OR json_valid(sources))' },
+  { table: 'poultry_guidance', column: 'source_differences', definition: 'TEXT' },
+  { table: 'poultry_guidance', column: 'strain_note', definition: 'TEXT' },
+  { table: 'poultry_guidance', column: 'referral', definition: 'TEXT' },
+  { table: 'poultry_guidance', column: 'related_codes', definition: 'TEXT CHECK (related_codes IS NULL OR json_valid(related_codes))' },
+  { table: 'poultry_guidance', column: 'keywords', definition: 'TEXT CHECK (keywords IS NULL OR json_valid(keywords))' },
+  { table: 'poultry_guidance', column: 'content_version', definition: 'INTEGER CHECK (content_version IS NULL OR content_version >= 1)' },
+  { table: 'poultry_guidance', column: 'reviewed_on', definition: 'TEXT' },
+  { table: 'poultry_guidance', column: 'is_active', definition: 'INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1))' },
+  { table: 'poultry_guidance', column: 'sort_order', definition: 'INTEGER' },
 ];
 
 function runMigrations(database) {
@@ -171,6 +196,53 @@ function backfillFlockMovements(database) {
           ORDER BY a.activity_date, a.id`
       ).run(note, note, id);
     }
+  })();
+}
+
+// Expenses module: copy the old expense_records into the new farm_expenses table, with a link
+function copyLegacyExpenses(database) {
+  database.prepare(
+    `INSERT INTO farm_expenses (farm_id, flock_id, expense_date, category, amount, currency, description,
+                                legacy_expense_id, created_by, created_at, updated_at)
+     SELECT r.farm_id, NULL,
+            COALESCE(date(r.expense_date), date(r.created_at)),
+            r.category, r.amount, upper(f.currency),
+            COALESCE(NULLIF(trim(r.notes), ''), 'Expense copied from the earlier expense records (' || r.category || ').'),
+            r.id, r.recorded_by, r.created_at, r.updated_at
+       FROM expense_records r
+       JOIN farms f ON f.id = r.farm_id
+      WHERE upper(f.currency) GLOB '[A-Z][A-Z][A-Z]'
+        AND NOT EXISTS (SELECT 1 FROM farm_expenses e WHERE e.legacy_expense_id = r.id)
+      ORDER BY r.id`
+  ).run();
+}
+
+// Poultry Guidance:
+const GUIDANCE_COLUMNS = {
+  title: 'title', topic: 'topic', poultry_type: 'poultryType', content: 'content', source: 'source', summary: 'summary',
+  stages: 'stages', steps: 'steps', key_values: 'keyValues', notice: 'notice', evidence_labels: 'evidenceLabels',
+  sources: 'sources', source_differences: 'sourceDifferences', strain_note: 'strainNote', referral: 'referral',
+  related_codes: 'relatedCodes', keywords: 'keywords', content_version: 'contentVersion', reviewed_on: 'reviewedOn',
+  sort_order: 'sortOrder',
+};
+
+function syncGuidance(database, rows = guidanceRows()) {
+  const columns = Object.keys(GUIDANCE_COLUMNS);
+  const upsert = database.prepare(
+    `INSERT INTO poultry_guidance (code, ${columns.join(', ')}, is_active)
+     VALUES (@code, ${columns.map((c) => `@${GUIDANCE_COLUMNS[c]}`).join(', ')}, 1)
+     ON CONFLICT (code) DO UPDATE SET
+       ${columns.map((c) => `${c} = excluded.${c}`).join(', ')}, is_active = 1, updated_at = CURRENT_TIMESTAMP
+     WHERE poultry_guidance.is_active = 0
+        OR ${columns.map((c) => `poultry_guidance.${c} IS NOT excluded.${c}`).join(' OR ')}`
+  );
+  database.transaction(() => {
+    for (const row of rows) upsert.run(row);
+    const codes = rows.map((r) => r.code);
+    database.prepare(
+      `UPDATE poultry_guidance SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+        WHERE code IS NOT NULL AND is_active = 1 AND code NOT IN (${codes.map(() => '?').join(', ')})`
+    ).run(...codes);
   })();
 }
 
@@ -223,4 +295,4 @@ function closeDb() {
   }
 }
 
-module.exports = { getDb, runInTransaction, runInImmediateTransaction, closeDb };
+module.exports = { getDb, runInTransaction, runInImmediateTransaction, closeDb, syncGuidance };
