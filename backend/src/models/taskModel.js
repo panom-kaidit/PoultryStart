@@ -110,6 +110,17 @@ function findByIdForFarm(farmId, id) {
   return toTask(getDb().prepare('SELECT * FROM daily_tasks WHERE id = ? AND farm_id = ?').get(id, farmId));
 }
 
+function existsActiveForSlot(farmId, slot) {
+  const prefix = `${slot}|v`;
+  return getDb()
+    .prepare(
+      `SELECT 1 FROM daily_tasks
+        WHERE farm_id = ? AND generation_key IS NOT NULL AND cancelled_at IS NULL
+          AND substr(generation_key, 1, length(?)) = ?`
+    )
+    .get(farmId, prefix, prefix) !== undefined;
+}
+
 function findByGenerationKey(farmId, generationKey) {
   return toTask(getDb().prepare('SELECT * FROM daily_tasks WHERE farm_id = ? AND generation_key = ?').get(farmId, generationKey));
 }
@@ -117,12 +128,17 @@ function findByGenerationKey(farmId, generationKey) {
 // Order of the day's time slots when listing.
 const SLOT_ORDER = "CASE time_slot WHEN 'morning' THEN 1 WHEN 'midday' THEN 2 WHEN 'evening' THEN 3 ELSE 4 END";
 
-function findForFarm(farmId, { from, to, flockId, status, assignedTo, visibleToUserId } = {}) {
+
+function findForFarm(farmId, { from, to, flockId, status, today, weekStartedFrom, assignedTo, visibleToUserId } = {}) {
   const where = ['farm_id = @farmId'];
+  const open = "status = 'pending' AND cancelled_at IS NULL";
+  const notPast = "(due_date >= @today OR (frequency = 'weekly' AND due_date >= @weekStartedFrom))";
   if (from) where.push('due_date >= @from');
   if (to) where.push('due_date <= @to');
   if (flockId) where.push('flock_id = @flockId');
-  if (status === 'pending') where.push("status = 'pending' AND cancelled_at IS NULL");
+  if (status === 'pending') where.push(`${open} AND ${notPast}`);
+  if (status === 'overdue') where.push(`${open} AND NOT ${notPast} AND frequency <> 'daily'`);
+  if (status === 'missed') where.push(`${open} AND due_date < @today AND frequency = 'daily'`);
   if (status === 'completed') where.push("status = 'completed'");
   if (status === 'cancelled') where.push('cancelled_at IS NOT NULL');
   if (assignedTo === 'unassigned') where.push('assigned_to IS NULL');
@@ -130,7 +146,7 @@ function findForFarm(farmId, { from, to, flockId, status, assignedTo, visibleToU
   if (visibleToUserId) where.push('(assigned_to = @visibleToUserId OR assigned_to IS NULL)');
   return getDb()
     .prepare(`SELECT * FROM daily_tasks WHERE ${where.join(' AND ')} ORDER BY due_date, ${SLOT_ORDER}, id`)
-    .all({ farmId, from, to, flockId, assignedTo, visibleToUserId })
+    .all({ farmId, from, to, flockId, today, weekStartedFrom, assignedTo, visibleToUserId })
     .map(toTask);
 }
 
@@ -278,6 +294,7 @@ module.exports = {
   findById,
   findByIdForFarm,
   findByGenerationKey,
+  existsActiveForSlot,
   findForFarm,
   update,
   markCompleted,

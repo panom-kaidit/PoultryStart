@@ -7,6 +7,8 @@ const {
   createFlockRules, listFlocksRules, updateFlockRules, closeFlockRules,
 } = require('../validators/flockValidators');
 const flockMovementRoutes = require('./flockMovementRoutes');
+const { flockRecordRoutes } = require('./productionRecordRoutes');
+const { flockHealthRoutes } = require('./healthObservationRoutes');
 
 const router = express.Router({ mergeParams: true });
 
@@ -22,5 +24,10 @@ router.delete('/:flockId', requirePermission('records:delete'), flockController.
 
 // Bird movements of one flock.
 router.use('/:flockId/movements', flockMovementRoutes);
+
+router.use('/:flockId/records/health', flockHealthRoutes);
+
+// Production records of one flock (weights, eggs, feed, water)
+router.use('/:flockId/records', flockRecordRoutes);
 
 module.exports = router;

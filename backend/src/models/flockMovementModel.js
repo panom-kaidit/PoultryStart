@@ -111,6 +111,13 @@ function liveBirdCount(flockId) {
     .get(flockId).live;
 }
 
+// Live birds ON a date:
+function liveBirdCountOn(flockId, date) {
+  return getDb()
+    .prepare('SELECT COALESCE(SUM(bird_change), 0) AS live FROM flock_bird_movements WHERE flock_id = ? AND movement_date <= ?')
+    .get(flockId, date).live;
+}
+
 // Birds per movement type, as positive numbers for in/out types and as a signed net value for corrections
 function totalsByType(flockId) {
   const totals = Object.fromEntries(MOVEMENT_TYPES.map((type) => [type, 0]));
@@ -136,5 +143,6 @@ module.exports = {
   countForFlock,
   updateReceivedDate,
   liveBirdCount,
+  liveBirdCountOn,
   totalsByType,
 };

@@ -10,6 +10,14 @@ const memberRoutes = require('./memberRoutes');
 const readinessRoutes = require('./readinessRoutes');
 const flockRoutes = require('./flockRoutes');
 const taskRoutes = require('./taskRoutes');
+const { farmRecordRoutes } = require('./productionRecordRoutes');
+const { farmHealthRoutes } = require('./healthObservationRoutes');
+const expenseRoutes = require('./expenseRoutes');
+const advisorController = require('../controllers/advisorController');
+const { advisorRules } = require('../validators/guidanceValidators');
+const dashboardController = require('../controllers/dashboardController');
+const { dashboardRules } = require('../validators/reportValidators');
+const reportRoutes = require('./reportRoutes');
 
 const router = express.Router();
 
@@ -37,5 +45,15 @@ router.use('/:farmId/members', loadFarmAccess, memberRoutes);
 router.use('/:farmId/readiness', loadFarmAccess, readinessRoutes);
 router.use('/:farmId/flocks', loadFarmAccess, flockRoutes);
 router.use('/:farmId/tasks', loadFarmAccess, taskRoutes);
+router.use('/:farmId/production-records', loadFarmAccess, farmRecordRoutes);
+router.use('/:farmId/health-observations', loadFarmAccess, farmHealthRoutes);
+router.use('/:farmId/expenses', loadFarmAccess, expenseRoutes);
+
+// Poultry Advisor.
+router.get('/:farmId/advisor', loadFarmAccess, requirePermission('advisor:view'), advisorRules, validate, advisorController.advise);
+
+// Dashboard and reports.
+router.get('/:farmId/dashboard', loadFarmAccess, requirePermission('dashboard:view'), dashboardRules, validate, dashboardController.dashboard);
+router.use('/:farmId/reports', loadFarmAccess, reportRoutes);
 
 module.exports = router;
