@@ -1,4 +1,4 @@
-// Business logic for the Farm Readiness Assessment.
+// Handles farm readiness assessment business operations.
 const { runInTransaction } = require('../config/database');
 const readinessModel = require('../models/readinessModel');
 const checklistModel = require('../models/checklistModel');
@@ -7,17 +7,14 @@ const { calculateCapacity, densityModeFor } = require('./capacityService');
 const { AREAS, NEEDED_BY, defaultChecklistFor } = require('../data/readinessContent');
 const { DEFAULT_STARTING_STAGE } = require('../data/startingStages');
 
-// The birds' age (weeks) when they arrive: 0 for day-old chicks.
 const arrivalAgeOf = (assessment) =>
   (assessment.startingStage === 'day_old' ? 0 : (assessment.startingAgeWeeks ?? 0));
 
-// A requirement is IMMEDIATE
 function isImmediate(entry, arrivalAgeWeeks) {
   const deadline = NEEDED_BY[entry.neededBy || 'chick_arrival'];
   return deadline.ageWeeks != null && arrivalAgeWeeks >= deadline.ageWeeks;
 }
 
-// The questions that apply to an assessment
 function questionsFor(assessment) {
   const stage = assessment.startingStage || DEFAULT_STARTING_STAGE;
   return readinessModel.findQuestionsFor(assessment.poultryType)
@@ -41,7 +38,6 @@ function calculateReadiness(questions, responses, items, capacity, arrivalAgeWee
   const missingResources = itemsNow.filter((i) => i.isRequired && !i.isAvailable).map(briefItem);
   const optionalNotAvailable = itemsNow.filter((i) => !i.isRequired && !i.isAvailable).map(briefItem);
 
-  // Later-stage requirements that are not in place yet, with their deadline.
   const laterStageRequirements = [
     ...questions.filter((q) => !now(q) && answers.get(q.id)?.answer !== 'yes')
       .map((q) => ({ type: 'question', ...brief(q), isRequired: q.isRequired, neededBy: q.neededBy })),
@@ -67,7 +63,6 @@ function calculateReadiness(questions, responses, items, capacity, arrivalAgeWee
   else if (needsAttention.length > 0 || missingResources.length > 0 || spaceAboveCapacity || houseNotBuilt) status = 'not_ready';
   else status = 'ready';
 
-  // Preparation areas that still need attention, in a fixed order.
   const flagged = new Set([
     ...unansweredRequired.map((q) => q.area),
     ...needsAttention.map((q) => q.area),
@@ -94,7 +89,6 @@ function calculateReadiness(questions, responses, items, capacity, arrivalAgeWee
   };
 }
 
-// Loads an assessment of this farm, or throws 404.
 function getAssessmentOrFail(farmId, assessmentId) {
   const assessment = readinessModel.findAssessment(farmId, assessmentId);
   if (!assessment) {
@@ -103,7 +97,6 @@ function getAssessmentOrFail(farmId, assessmentId) {
   return assessment;
 }
 
-// The space check for an assessment.
 function capacityFor(farm, assessment) {
   return calculateCapacity({
     poultryType: assessment.poultryType,
@@ -119,7 +112,6 @@ function capacityFor(farm, assessment) {
   });
 }
 
-// Works out the current status 
 function evaluate(farm, assessment) {
   const questions = questionsFor(assessment);
   const responses = readinessModel.findResponses(assessment.id);
@@ -155,7 +147,6 @@ function evaluate(farm, assessment) {
   };
 }
 
-// Full view of one assessment
 function buildDetail(farm, assessment) {
   const { assessment: current, summary, capacity, questions, responses, items } = evaluate(farm, assessment);
   const answers = new Map(responses.map((r) => [r.questionId, r]));
@@ -178,8 +169,6 @@ function buildDetail(farm, assessment) {
   };
 }
 
-// ---- Public functions used by the controller and farm service ----------
-
 function listAssessments(farm) {
   const assessments = readinessModel.findAssessmentsForFarm(farm.id);
   const evaluated = assessments.map((a) => evaluate(farm, a));
@@ -191,8 +180,6 @@ function listAssessments(farm) {
   };
 }
 
-// Starts a new assessment for the farm's current poultry type and copies in
-// the default checklist for that type.
 function createAssessment(farm) {
   const assessment = runInTransaction(() => {
     const startingStage = farm.startingStage || DEFAULT_STARTING_STAGE;
@@ -224,7 +211,6 @@ function getAssessment(farm, assessmentId) {
   return buildDetail(farm, getAssessmentOrFail(farm.id, assessmentId));
 }
 
-// Saves or updates several answers at once
 function saveResponses(farm, assessmentId, responses, userId) {
   const assessment = getAssessmentOrFail(farm.id, assessmentId);
   const applicable = new Map(questionsFor(assessment).map((q) => [q.id, q]));
@@ -278,7 +264,6 @@ function listResources(farm, assessmentId) {
   };
 }
 
-// The owner adds their own checklist item
 function addCustomResource(farm, assessmentId, data) {
   const assessment = getAssessmentOrFail(farm.id, assessmentId);
   const item = checklistModel.createItem({
@@ -296,7 +281,6 @@ function addCustomResource(farm, assessmentId, data) {
   return { resource: item, status: current.status };
 }
 
-// Default items
 function updateResource(farm, assessmentId, itemId, data) {
   const assessment = getAssessmentOrFail(farm.id, assessmentId);
   const item = checklistModel.findItem(farm.id, assessment.id, itemId);
@@ -319,7 +303,16 @@ function updateResource(farm, assessmentId, itemId, data) {
   return { resource: updated, status: current.status };
 }
 
+function latestReadinessView(farm) {
+  const [latest] = readinessModel.findAssessmentsForFarm(farm.id);
+  if (!latest) return null;
+  const summary = calculateReadiness(questionsFor(latest), readinessModel.findResponses(latest.id),
+    checklistModel.findItemsForAssessment(latest.id), capacityFor(farm, latest), arrivalAgeOf(latest));
+  return { assessmentId: latest.id, savedStatus: latest.status, summary };
+}
+
 module.exports = {
+  latestReadinessView,
   calculateReadiness,
   listAssessments,
   createAssessment,
