@@ -1,11 +1,19 @@
-// Business logic for daily tasks 
+// Handles daily task business operations.
 const { runInTransaction, runInImmediateTransaction } = require('../config/database');
 const taskModel = require('../models/taskModel');
 const flockModel = require('../models/flockModel');
+const productionRecordModel = require('../models/productionRecordModel');
+const healthObservationModel = require('../models/healthObservationModel');
+const expenseModel = require('../models/expenseModel');
+const farmModel = require('../models/farmModel');
+const { taskGuidanceLinks } = require('./guidanceService');
 const membershipModel = require('../models/membershipModel');
 const AppError = require('../utils/AppError');
 const { roleHasPermission } = require('../utils/permissions');
 const { CUSTOM_TASK_TYPES, DEFAULT_CUSTOM_TASK_TYPE, customTypeOfCode } = require('../data/customTaskTypes');
+const { ugandaToday, addDays } = require('../utils/dates');
+const { findTemplate, RECORD_LINKS, SOURCE_TYPES, labelsOf } = require('../data/taskTemplates');
+const { generateTasks } = require('./taskGenerator');
 
 const invalid = (field, message) => {
   throw new AppError(400, 'Some of the information provided is invalid.', [{ field, message }]);
@@ -18,45 +26,107 @@ const canManage = (membership) => roleHasPermission(membership.role, 'tasks:mana
 const canSee = (task, membership) => canManage(membership)
   || task.assignedTo === null || task.assignedTo === membership.userId;
 
-// The status shown to users.
-function displayStatusOf(task) {
+const WEEK_EXTRA_DAYS = 6;
+const lastDayOf = (task) => (task.frequency === 'weekly' ? addDays(task.dueDate, WEEK_EXTRA_DAYS) : task.dueDate);
+
+function displayStatusOf(task, today = ugandaToday()) {
   if (task.cancelledAt) return 'cancelled';
-  return task.status; // 'pending' or 'completed'
+  if (task.status === 'completed') return 'completed';
+  if (lastDayOf(task) >= today) return 'pending';
+  return task.frequency === 'daily' ? 'missed' : 'overdue';
 }
 
-// A task as returned by the API.
-function present(task) {
+const ugandaDateOf = (utcTimestamp) => ugandaToday(new Date(`${utcTimestamp.replace(' ', 'T')}Z`));
+
+function completedLateOf(task) {
+  if (task.status !== 'completed' || !task.completedAt) return undefined;
+  return ugandaDateOf(task.completedAt) > lastDayOf(task);
+}
+
+function recordLinksFor(task, template, viewer) {
+  if (!template.recordLinks) return [];
+  const flock = task.flockId ? flockModel.findById(task.flockId) : null;
+  const from = task.dueDate;
+  const to = lastDayOf(task);
+  return template.recordLinks
+    .filter((type) => type !== 'egg_records' || (flock && flock.poultryType === 'layer' && Boolean(flock.firstEggDate)))
+    .filter((type) => !RECORD_LINKS[type].permission || (viewer && roleHasPermission(viewer.role, RECORD_LINKS[type].permission)))
+    .map((type) => {
+      const { path, farmPath, recordType, permission, ...link } = RECORD_LINKS[type];
+      const result = { type, ...link };
+      if (farmPath) {
+        const filters = { ...(flock ? { flockId: flock.id } : {}), ...(template.recordLinkFilters?.[type] || {}) };
+        const qs = new URLSearchParams(filters).toString();
+        result.path = `/api/farms/${task.farmId}/${farmPath}${qs ? `?${qs}` : ''}`;
+        result.recordType = recordType;
+        result.recordsForTaskPeriod = expenseModel.countActiveBetween(task.farmId, { ...filters, from, to });
+        return result;
+      }
+      if (flock && path) result.path = `/api/farms/${task.farmId}/flocks/${flock.id}/${path}`;
+      if (flock && recordType) {
+        result.recordType = recordType;
+        result.recordsForTaskPeriod = recordType === 'health'
+          ? healthObservationModel.countForFlockBetween(flock.id, from, to)
+          : productionRecordModel.countForFlockBetween(recordType, flock.id, from, to);
+      }
+      return result;
+    });
+}
+
+function poultryTypeOf(task) {
+  const flock = task.flockId ? flockModel.findById(task.flockId) : null;
+  return flock ? flock.poultryType : farmModel.findById(task.farmId)?.poultryType;
+}
+
+function present(task, today = ugandaToday(), viewer = null) {
   const taskType = customTypeOfCode(task.templateCode);
-  const result = { ...task, taskType, displayStatus: displayStatusOf(task) };
+  const result = { ...task, taskType, displayStatus: displayStatusOf(task, today) };
+  if (task.status === 'completed' && task.completedAt) result.completedLate = completedLateOf(task);
   if (taskType === 'vet_plan') result.disclaimer = CUSTOM_TASK_TYPES.vet_plan.disclaimer;
+  const template = task.source === 'generated' ? findTemplate(task.templateCode) : null;
+  if (template) {
+    result.guidance = {
+      basis: template.basis,
+      labels: labelsOf(template),
+      sources: template.sources.map((code) => ({ code, ...SOURCE_TYPES[code] })),
+    };
+    result.recordLinks = recordLinksFor(task, template, viewer);
+    result.recordLink = result.recordLinks[0] || null;
+    result.guidanceLinks = taskGuidanceLinks(template.code, poultryTypeOf(task));
+  }
   return result;
 }
 
-// The flock must be an ACTIVE flock of this farm (a closed flock is read-only).
+const withHistory = (task, viewer) => ({ ...present(task, undefined, viewer), history: taskModel.findEvents(task.id) });
+
+function assertOpen(task, action) {
+  const status = displayStatusOf(task);
+  if (status === 'cancelled') throw new AppError(409, `This task was cancelled, so it cannot be ${action}.`);
+  if (status === 'completed') throw new AppError(409, `This task is already completed, so it cannot be ${action}.`);
+  if (status === 'missed') {
+    throw new AppError(409, `This daily task was missed (it was due on ${task.dueDate}), so it cannot be ${action}. ` +
+      'A missed task stays missed; an owner or manager can add a review note.');
+  }
+}
+
 function checkFlock(farm, flockId) {
   const flock = flockModel.findByIdForFarm(farm.id, flockId);
   if (!flock) invalid('flockId', `Flock ${flockId} was not found on this farm.`);
   if (flock.status !== 'active') invalid('flockId', `Flock "${flock.name}" is closed. Tasks can only be linked to active flocks.`);
 }
 
-// The assignee must be a member of this farm (owner, manager or worker).
 function checkAssignee(farm, userId) {
   if (!membershipModel.findByFarmAndUser(farm.id, userId)) {
     invalid('assignedTo', `User ${userId} is not a member of this farm. Add them to the farm first.`);
   }
 }
 
-// The task, if it exists on this farm AND this member may see it.
-// Otherwise "not found", so workers learn nothing about other workers' tasks.
 function getVisibleTaskOrFail(farm, membership, taskId) {
   const task = taskModel.findByIdForFarm(farm.id, taskId);
   if (!task || !canSee(task, membership)) throw new AppError(404, 'Task not found.');
   return task;
 }
 
-// ---- Public functions used by the controller --------------------------
-
-// Creates a custom task (owner or manager).
 function createTask(farm, data, userId) {
   if (data.flockId != null) checkFlock(farm, data.flockId);
   if (data.assignedTo != null) checkAssignee(farm, data.assignedTo);
@@ -80,8 +150,8 @@ function createTask(farm, data, userId) {
   });
 }
 
-// Lists the farm's tasks visible to this member, with optional filters.
 function listTasks(farm, membership, filters) {
+  generateTasks(farm, ugandaToday());
   let { assignedTo } = filters;
   if (assignedTo === 'me') assignedTo = membership.userId;
   else if (assignedTo && assignedTo !== 'unassigned') assignedTo = Number(assignedTo);
@@ -90,23 +160,21 @@ function listTasks(farm, membership, filters) {
     to: filters.to,
     flockId: filters.flockId ? Number(filters.flockId) : undefined,
     status: filters.status,
+    today: ugandaToday(),
+    weekStartedFrom: addDays(ugandaToday(), -WEEK_EXTRA_DAYS),
     assignedTo,
     visibleToUserId: canManage(membership) ? undefined : membership.userId,
-  }).map(present);
+  }).map((task) => present(task, undefined, membership));
 }
 
-// One task with its audit history.
 function getTask(farm, membership, taskId) {
-  const task = getVisibleTaskOrFail(farm, membership, taskId);
-  return { ...present(task), history: taskModel.findEvents(task.id) };
+  return withHistory(getVisibleTaskOrFail(farm, membership, taskId), membership);
 }
 
-// Edits a pending task (owner or manager)
 function updateTask(farm, membership, taskId, data) {
   return runInImmediateTransaction(() => {
     const task = getVisibleTaskOrFail(farm, membership, taskId);
-    if (task.cancelledAt) throw new AppError(409, 'This task was cancelled and can no longer be changed.');
-    if (task.status !== 'pending') throw new AppError(409, 'This task is completed and can no longer be changed.');
+    assertOpen(task, 'changed');
 
     const sent = Object.fromEntries(EDITABLE_FIELDS.filter((key) => data[key] !== undefined).map((key) => [key, data[key]]));
     if (task.source === 'generated') {
@@ -120,21 +188,60 @@ function updateTask(farm, membership, taskId, data) {
 
     const updated = taskModel.update(task.id, sent);
     if (!updated) throw new AppError(409, 'This task is no longer pending and was not changed.');
-    return { ...present(updated), history: taskModel.findEvents(task.id) };
+    return withHistory(updated, membership);
   });
 }
 
-// Cancels a pending task with a reason (owner or manager).
 function cancelTask(farm, membership, taskId, reason, userId) {
   return runInImmediateTransaction(() => {
     const task = getVisibleTaskOrFail(farm, membership, taskId);
     if (task.cancelledAt) throw new AppError(409, 'This task is already cancelled.');
-    if (task.status !== 'pending') throw new AppError(409, 'A completed task cannot be cancelled.');
+    assertOpen(task, 'cancelled');
     if (!taskModel.cancel(task.id, { userId, reason })) {
       throw new AppError(409, 'This task is no longer pending and was not cancelled.');
     }
-    return { ...present(taskModel.findById(task.id)), history: taskModel.findEvents(task.id) };
+    return withHistory(taskModel.findById(task.id), membership);
   });
 }
 
-module.exports = { createTask, listTasks, getTask, updateTask, cancelTask, displayStatusOf };
+function completeTask(farm, membership, taskId, data, userId) {
+  return runInImmediateTransaction(() => {
+    const task = getVisibleTaskOrFail(farm, membership, taskId);
+    assertOpen(task, 'completed');
+    const today = ugandaToday();
+    if (task.frequency === 'daily' && task.dueDate > today) {
+      throw new AppError(409, `This daily task is for ${task.dueDate}. It can only be completed on that day.`);
+    }
+    const done = taskModel.markCompleted(task.id, {
+      userId,
+      notes: data.notes || null,
+      problemReported: data.problemReported === true,
+    });
+    if (!done) throw new AppError(409, 'This task is no longer open and was not completed.');
+    return withHistory(taskModel.findById(task.id), membership);
+  });
+}
+
+function reopenTask(farm, membership, taskId, reason, userId) {
+  return runInImmediateTransaction(() => {
+    const task = getVisibleTaskOrFail(farm, membership, taskId);
+    if (task.cancelledAt) throw new AppError(409, 'This task was cancelled, so it cannot be reopened.');
+    if (task.status !== 'completed') throw new AppError(409, 'Only a completed task can be reopened.');
+    if (!taskModel.reopen(task.id, { userId, reason })) {
+      throw new AppError(409, 'This task is no longer completed and was not reopened.');
+    }
+    return withHistory(taskModel.findById(task.id), membership);
+  });
+}
+
+function addReviewNote(farm, membership, taskId, note, userId) {
+  return runInImmediateTransaction(() => {
+    const task = getVisibleTaskOrFail(farm, membership, taskId);
+    taskModel.addReviewNote(task.id, { userId, note });
+    return withHistory(taskModel.findById(task.id), membership);
+  });
+}
+
+module.exports = {
+  createTask, listTasks, getTask, updateTask, cancelTask, completeTask, reopenTask, addReviewNote, displayStatusOf, completedLateOf,
+};

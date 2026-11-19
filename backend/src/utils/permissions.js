@@ -1,5 +1,4 @@
-// Permission utilities
-
+// Defines the role permission matrix and permission checks.
 const ROLES = Object.freeze({
   OWNER: 'owner',
   MANAGER: 'manager',
@@ -11,48 +10,48 @@ const OWNER_ONLY = [ROLES.OWNER];
 const OWNER_AND_MANAGER = [ROLES.OWNER, ROLES.MANAGER];
 
 const PERMISSIONS = Object.freeze({
-  // Farm profile 
   'farm:view': ALL_ROLES,
   'farm:update': OWNER_ONLY,
   'farm:delete': OWNER_ONLY,
 
-  // Members
   'members:view': OWNER_AND_MANAGER,
   'members:manage': OWNER_ONLY,
 
-  // Readiness assessment and resource checklist 
   'readiness:manage': OWNER_ONLY,
 
-  // Flocks, Workers can view so they can pick a flock when recording.
   'flocks:view': ALL_ROLES,
-  'flocks:manage': OWNER_AND_MANAGER, // incl. culling, sales, transfers, additions, corrections
-  // Daily mortality: everyone who looks after the birds (approved D8).
+  'flocks:manage': OWNER_AND_MANAGER,
   'flocks:record_mortality': ALL_ROLES,
 
-  // Daily tasks
   'tasks:view': ALL_ROLES,
   'tasks:manage': OWNER_AND_MANAGER,
   'tasks:complete': ALL_ROLES,
+  'tasks:reopen': OWNER_AND_MANAGER,
 
-  // Farm activity records
-  'activities:view': ALL_ROLES,
-  'activities:record': ALL_ROLES,
-  'activities:update': ALL_ROLES,
+  'production:view': ALL_ROLES,
+  'production:create': ALL_ROLES,
+  'production:correct': OWNER_AND_MANAGER,
 
-  // Expenses 
-  'expenses:manage': OWNER_ONLY,
+  'health:view': ALL_ROLES,
+  'health:create': ALL_ROLES,
+  'health:correct': OWNER_AND_MANAGER,
 
-  // Dashboard . Managers get it without the expense summary.
+  'expenses:view': OWNER_ONLY,
+  'expenses:record': OWNER_ONLY,
+  'expenses:correct': OWNER_ONLY,
+
+  'advisor:view': ALL_ROLES,
+
   'dashboard:view': OWNER_AND_MANAGER,
 
-  // Deleting records: owner only
+  'reports:view': OWNER_AND_MANAGER,
+
   'records:delete': OWNER_ONLY,
 });
 
 function roleHasPermission(role, permission) {
   const allowedRoles = PERMISSIONS[permission];
   if (!allowedRoles) {
-    // A typo in a permission name should fail loudly during development.
     throw new Error(`Unknown permission: ${permission}`);
   }
   return allowedRoles.includes(role);
