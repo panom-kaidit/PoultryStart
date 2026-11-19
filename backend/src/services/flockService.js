@@ -1,4 +1,4 @@
-// Business logic for flocks
+// Handles flock business operations.
 const { runInTransaction, runInImmediateTransaction } = require('../config/database');
 const flockModel = require('../models/flockModel');
 const flockMovementModel = require('../models/flockMovementModel');
@@ -19,7 +19,6 @@ const invalid = (field, message) => {
   throw new AppError(400, 'Some of the information provided is invalid.', [{ field, message }]);
 };
 
-// Age in weeks on arrival
 const arrivalAgeOf = (flock) => (flock.startingStage === 'day_old' ? 0 : flock.ageAtArrivalWeeks);
 
 function ageOf(flock) {
@@ -37,8 +36,6 @@ function withDetails(flock) {
     movementTotals: flockMovementModel.totalsByType(flock.id),
   };
 }
-
-// ---- Space check ------------------------------
 
 function capacityCheckFor(farm, flock, otherActiveFlocks, { addedBirds = null } = {}) {
   const otherBirds = otherActiveFlocks.reduce((sum, f) => sum + f.liveBirds, 0);
@@ -98,12 +95,11 @@ function capacityCheckFor(farm, flock, otherActiveFlocks, { addedBirds = null } 
           'measurements) so the space can be checked.',
       ];
       break;
-    default: // incomplete: the house measurements are missing
+    default:
       message = 'The space could not be checked because the house length and width are not in the farm profile.';
       guidance = [recorded, 'Add the house measurements to the farm profile so the space can be checked.'];
   }
 
-  // Several active flocks
   let sharedHouse = null;
   if (otherActiveFlocks.length > 0) {
     const others = otherActiveFlocks.map((f) => {
@@ -141,8 +137,6 @@ function capacityCheckFor(farm, flock, otherActiveFlocks, { addedBirds = null } 
   };
 }
 
-// ---- Plan comparison and readiness (information only) ----------------
-
 function planComparisonFor(farm, birdsReceived) {
   const plannedBirds = farm.numberOfBirds;
   const difference = birdsReceived - plannedBirds;
@@ -154,7 +148,6 @@ function planComparisonFor(farm, birdsReceived) {
   return { plannedBirds, birdsReceived, difference, message };
 }
 
-// The latest readiness assessment's stored status.
 function readinessFor(farm) {
   const [latest] = readinessModel.findAssessmentsForFarm(farm.id);
   if (!latest) return { status: 'not_started', assessmentId: null, assessmentDate: null };
@@ -181,8 +174,6 @@ function warningsFor(capacityCheck, readiness) {
   }
   return warnings;
 }
-
-// ---- Public functions used by the controller --------------------------
 
 function createFlock(farm, data, userId) {
   if (data.poultryType !== farm.poultryType) {
@@ -221,7 +212,6 @@ function createFlock(farm, data, userId) {
       femalesReceived: data.femalesReceived ?? null,
       vaccinationNotes: data.vaccinationNotes ?? null,
       notes: data.notes ?? null,
-      // The space check on arrival, kept with the flock.
       capacityStatus: capacityCheck.status,
       recommendedCapacity: capacityCheck.recommendedCapacity,
       densityMode: capacityCheck.densityMode,
@@ -242,20 +232,18 @@ function listFlocks(farm, status) {
   return flockModel.findAllForFarm(farm.id, status ? { status } : {}).map(withDetails);
 }
 
-// Only a flock of THIS farm: another farm's flock is "not found".
 function getFlockOrFail(farmId, flockId) {
   const flock = flockModel.findByIdForFarm(farmId, flockId);
   if (!flock) throw new AppError(404, 'Flock not found.');
   return flock;
 }
 
-// One flock, with the audit trail of any corrections to its arrival details.
 function getFlock(farm, flockId) {
   const flock = getFlockOrFail(farm.id, flockId);
   return {
     ...withDetails(flock),
     arrivalCorrections: flockModel.findArrivalCorrections(flock.id),
-    milestoneChanges: flockModel.findMilestoneChanges(flock.id), // first-egg / sale date history
+    milestoneChanges: flockModel.findMilestoneChanges(flock.id),
   };
 }
 
@@ -263,10 +251,9 @@ const closedFlockError = () => new AppError(409,
   'This flock is closed. Closed flocks are kept for viewing but cannot be changed or reopened.');
 
 
-// Descriptive details: can be edited at any time while the flock is active.
 const DESCRIPTIVE_FIELDS = ['name', 'breedStrain', 'supplier', 'vaccinationNotes', 'notes'];
 const ARRIVAL_FIELDS = ['arrivalDate', 'startingStage', 'ageAtArrivalWeeks', 'malesReceived', 'femalesReceived'];
-const ARRIVAL_COLUMNS = { arrivalDate: 'startDate' }; // API name -> model name, where they differ
+const ARRIVAL_COLUMNS = { arrivalDate: 'startDate' };
 
 function updateFlock(farm, flockId, data, userId) {
   const sent = (fields) => fields.filter((f) => data[f] !== undefined);
@@ -277,7 +264,6 @@ function updateFlock(farm, flockId, data, userId) {
     const update = Object.fromEntries(sent(DESCRIPTIVE_FIELDS).map((f) => [f, data[f]]));
     let arrivalCorrection = null;
 
-    // Only fields whose value really changes count as a correction.
     const arrivalChanged = sent(ARRIVAL_FIELDS).filter((f) => (data[f] ?? null) !== (flock[f] ?? null));
     if (arrivalChanged.length > 0) {
       if (!data.correctionReason) {
@@ -290,7 +276,6 @@ function updateFlock(farm, flockId, data, userId) {
           'Use a correction movement for bird-number errors.');
       }
 
-      // Same stage and age rules as when the flock was recorded.
       const merged = { ...flock, ...Object.fromEntries(arrivalChanged.map((f) => [f, data[f]])) };
       const stageInput = { poultryType: flock.poultryType, startingStage: merged.startingStage, ageAtArrivalWeeks: merged.ageAtArrivalWeeks };
       const stageSent = data.ageAtArrivalWeeks !== undefined ? { ageAtArrivalWeeks: data.ageAtArrivalWeeks } : {};
@@ -321,8 +306,6 @@ function updateFlock(farm, flockId, data, userId) {
       }
     }
 
-    // Milestones: the value, its append-only history row and the task
-    // reconciliation are saved in this one transaction (all or nothing).
     const milestones = applyMilestones(flock, data, update, userId);
 
     flockModel.update(flock.id, update);
@@ -330,7 +313,6 @@ function updateFlock(farm, flockId, data, userId) {
   });
 }
 
-// The two milestones a flock can have.
 const MILESTONE_FIELDS = [
   { field: 'firstEggDate', milestone: 'first_egg_date', label: 'first-egg date', poultryType: 'layer',
     wrongTypeMessage: 'Only layer flocks have a first-egg date.' },
@@ -338,8 +320,6 @@ const MILESTONE_FIELDS = [
     wrongTypeMessage: 'Only broiler flocks have an expected sale date. PoultryStart does not set a sale age.' },
 ];
 
-// Sets or changes the first-egg date (layers) and expected sale date
-// (broilers).
 function applyMilestones(flock, data, update, userId) {
   const today = ugandaToday();
   const arrivalDate = update.startDate ?? flock.arrivalDate;
@@ -352,7 +332,7 @@ function applyMilestones(flock, data, update, userId) {
     if (value === undefined) continue;
     if (flock.poultryType !== poultryType) invalid(field, wrongTypeMessage);
     const previous = flock[field] ?? null;
-    if (value === previous) continue; // nothing changes
+    if (value === previous) continue;
     if (value < arrivalDate) invalid(field, `The ${label} cannot be before the flock arrived (${arrivalDate}).`);
   
     if (milestone === 'first_egg_date') {
@@ -431,7 +411,6 @@ function closeFlock(farm, flockId, data, userId) {
   });
 }
 
-// Deletes a flock recorded by mistake
 function deleteFlock(farm, flockId) {
   return runInImmediateTransaction(() => {
     const flock = getFlockOrFail(farm.id, flockId);
@@ -446,13 +425,11 @@ function deleteFlock(farm, flockId) {
       throw new AppError(409, `This flock has ${withHistory} task${withHistory === 1 ? '' : 's'} with history ` +
         '(completed, or with review notes), so it cannot be deleted. Task history must be kept.');
     }
-    // Production records (weights, eggs, feed, water) are history too.
     const records = productionRecordModel.countAllForFlock(flock.id);
     if (records > 0) {
       throw new AppError(409, `This flock has ${records} production record${records === 1 ? '' : 's'} (weights, eggs, ` +
         'feed or water), so it cannot be deleted. Production history must be kept.');
     }
-    // Health observations are history too (the database also refuses it).
     const observations = healthObservationModel.countForFlock(flock.id);
     if (observations > 0) {
       throw new AppError(409, `This flock has ${observations} health observation${observations === 1 ? '' : 's'}, so it ` +
@@ -465,7 +442,6 @@ function deleteFlock(farm, flockId) {
         'so it cannot be deleted. Expense history must be kept. If the flock was recorded by mistake, remove the flock ' +
         'link from each expense with a correction first.');
     }
-    // Open and cancelled tasks without history are removed with the flock.
     const removedTasks = taskModel.findForFarm(farm.id, { flockId: flock.id }).length;
     flockModel.remove(flock.id);
     return { removedTasks };

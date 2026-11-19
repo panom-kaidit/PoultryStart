@@ -1,4 +1,4 @@
-// Business logic for expenses 
+// Handles expense business operations: recording, correcting, voiding and summarising.
 const { runInImmediateTransaction } = require('../config/database');
 const farmModel = require('../models/farmModel');
 const flockModel = require('../models/flockModel');
@@ -7,19 +7,17 @@ const AppError = require('../utils/AppError');
 const { ugandaToday, addDays, daysBetween } = require('../utils/dates');
 const { CATEGORIES, MAX_RANGE_DAYS, DEFAULT_RANGE_DAYS, SUMMARY_NOTE } = require('../data/expenses');
 
-// The fields a correction can change (the void fields are set by voiding only).
 const CORRECTABLE = ['expenseDate', 'category', 'amount', 'description', 'flockId'];
 
 const invalid = (field, message) => {
   throw new AppError(400, 'Some of the information provided is invalid.', [{ field, message }]);
 };
-const nowUtc = () => new Date().toISOString().replace('T', ' ').slice(0, 19); // same format as CURRENT_TIMESTAMP
+const nowUtc = () => new Date().toISOString().replace('T', ' ').slice(0, 19);
 
 function checkExpenseDate(date) {
   if (date > ugandaToday()) invalid('expenseDate', 'The expense date cannot be in the future.');
 }
 
-// The flock an expense is linked to must belong to this farm (active or closed).
 function checkFlock(farm, flockId) {
   if (flockId == null) return null;
   const flock = flockModel.findByIdForFarm(farm.id, flockId);
@@ -35,7 +33,6 @@ function getExpenseOrFail(farm, expenseId) {
 
 const withHistory = (expense) => ({ ...expense, corrections: expenseModel.findCorrections(expense.id) });
 
-// The date range of a list or summary
 function rangeOf(query) {
   const today = ugandaToday();
   let { from, to } = query;
@@ -47,7 +44,6 @@ function rangeOf(query) {
   return { from, to };
 }
 
-// Query filters shared by the list and the summary.
 function filtersOf(farm, query) {
   const filters = {};
   if (query.category) filters.category = query.category;
@@ -56,7 +52,6 @@ function filtersOf(farm, query) {
   return filters;
 }
 
-// The calendar months touched by a range ('YYYY-MM'), oldest first.
 function monthsOf(from, to) {
   const months = [];
   let [year, month] = from.slice(0, 7).split('-').map(Number);
@@ -70,13 +65,10 @@ function monthsOf(from, to) {
   }
 }
 
-// ---- Public functions used by the controller --------------------------
-
 function createExpense(farm, data, userId) {
   return runInImmediateTransaction(() => {
     checkExpenseDate(data.expenseDate);
     checkFlock(farm, data.flockId);
-    // The farm's currency at this moment, copied onto the expense for good.
     const { currency } = farmModel.findById(farm.id);
     const expense = expenseModel.create({ farmId: farm.id, currency, createdBy: userId }, {
       expenseDate: data.expenseDate,
@@ -101,7 +93,6 @@ function getExpense(farm, expenseId) {
   return withHistory(getExpenseOrFail(farm, expenseId));
 }
 
-// Corrects or voids an expense
 function correctExpense(farm, expenseId, data, userId) {
   return runInImmediateTransaction(() => {
     const current = getExpenseOrFail(farm, expenseId);
@@ -138,7 +129,6 @@ function correctExpense(farm, expenseId, data, userId) {
   });
 }
 
-// Basic expense summaries for a range 
 function summary(farm, query) {
   const range = rangeOf(query);
   const filters = filtersOf(farm, query);
