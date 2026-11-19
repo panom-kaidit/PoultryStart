@@ -3,6 +3,12 @@ const { runInTransaction, runInImmediateTransaction } = require('../config/datab
 const flockModel = require('../models/flockModel');
 const flockMovementModel = require('../models/flockMovementModel');
 const readinessModel = require('../models/readinessModel');
+const taskModel = require('../models/taskModel');
+const productionRecordModel = require('../models/productionRecordModel');
+const healthObservationModel = require('../models/healthObservationModel');
+const expenseModel = require('../models/expenseModel');
+const { templateCodesFor, FIRST_EGG_CHECK_FROM_WEEK } = require('../data/taskTemplates');
+const { createCleanOutTask } = require('./taskGenerator');
 const { calculateCapacity } = require('./capacityService');
 const { checkStartingStage } = require('./farmService');
 const { DEFAULT_STARTING_STAGE } = require('../data/startingStages');
@@ -246,7 +252,11 @@ function getFlockOrFail(farmId, flockId) {
 // One flock, with the audit trail of any corrections to its arrival details.
 function getFlock(farm, flockId) {
   const flock = getFlockOrFail(farm.id, flockId);
-  return { ...withDetails(flock), arrivalCorrections: flockModel.findArrivalCorrections(flock.id) };
+  return {
+    ...withDetails(flock),
+    arrivalCorrections: flockModel.findArrivalCorrections(flock.id),
+    milestoneChanges: flockModel.findMilestoneChanges(flock.id), // first-egg / sale date history
+  };
 }
 
 const closedFlockError = () => new AppError(409,
@@ -311,12 +321,80 @@ function updateFlock(farm, flockId, data, userId) {
       }
     }
 
+    // Milestones: the value, its append-only history row and the task
+    // reconciliation are saved in this one transaction (all or nothing).
+    const milestones = applyMilestones(flock, data, update, userId);
+
     flockModel.update(flock.id, update);
-    return { flock: getFlock(farm, flock.id), arrivalCorrection };
+    return { flock: getFlock(farm, flock.id), arrivalCorrection, milestones };
   });
 }
 
-function closeFlock(farm, flockId, data) {
+// The two milestones a flock can have.
+const MILESTONE_FIELDS = [
+  { field: 'firstEggDate', milestone: 'first_egg_date', label: 'first-egg date', poultryType: 'layer',
+    wrongTypeMessage: 'Only layer flocks have a first-egg date.' },
+  { field: 'expectedSaleDate', milestone: 'expected_sale_date', label: 'expected sale date', poultryType: 'broiler',
+    wrongTypeMessage: 'Only broiler flocks have an expected sale date. PoultryStart does not set a sale age.' },
+];
+
+// Sets or changes the first-egg date (layers) and expected sale date
+// (broilers).
+function applyMilestones(flock, data, update, userId) {
+  const today = ugandaToday();
+  const arrivalDate = update.startDate ?? flock.arrivalDate;
+  const changes = [];
+  const warnings = [];
+  let reconciledTasks = 0;
+
+  for (const { field, milestone, label, poultryType, wrongTypeMessage } of MILESTONE_FIELDS) {
+    const value = data[field];
+    if (value === undefined) continue;
+    if (flock.poultryType !== poultryType) invalid(field, wrongTypeMessage);
+    const previous = flock[field] ?? null;
+    if (value === previous) continue; // nothing changes
+    if (value < arrivalDate) invalid(field, `The ${label} cannot be before the flock arrived (${arrivalDate}).`);
+  
+    if (milestone === 'first_egg_date') {
+      const earlier = productionRecordModel.findEggRecordsBefore(flock.id, value);
+      if (earlier.length > 0) {
+        throw new AppError(409, `The first-egg date cannot be moved to ${value}: ${earlier.length} egg collection ` +
+          `record${earlier.length === 1 ? ' is' : 's are'} dated before it. Check those records first (correct their date ` +
+          'if they were entered on the wrong day).', earlier.map((r) => ({
+          field: 'firstEggDate',
+          message: `Egg record ${r.id}: ${r.recordDate}, ${r.collectionPeriod} (${r.totalEggs} eggs).`,
+          recordId: r.id,
+          recordDate: r.recordDate,
+        })));
+      }
+    }
+    if (previous && !data.correctionReason) {
+      invalid('correctionReason', `Give a reason for changing the ${label} (from ${previous} to ${value}).`);
+    }
+
+    flockModel.logMilestoneChange(flock.id, {
+      milestone, fromValue: previous, toValue: value, reason: previous ? data.correctionReason : null, changedBy: userId,
+    });
+    reconciledTasks += taskModel.cancelPendingGenerated(flock.id, templateCodesFor(milestone), today, {
+      userId,
+      reason: previous ? `The ${label} was changed from ${previous} to ${value}.` : `The ${label} was recorded (${value}).`,
+    });
+    update[field] = value;
+    changes.push({ milestone, from: previous, to: value });
+
+    if (milestone === 'first_egg_date') {
+      const ageWeeks = Math.floor(((flock.startingStage === 'day_old' ? 0 : (flock.ageAtArrivalWeeks ?? 0)) * 7
+        + daysBetween(arrivalDate, value)) / 7);
+      if (ageWeeks < FIRST_EGG_CHECK_FROM_WEEK) {
+        warnings.push({ code: 'early_first_egg', message: `The birds were ${ageWeeks} weeks old on ${value}. First eggs ` +
+          `usually come from about week ${FIRST_EGG_CHECK_FROM_WEEK}; please check the date. It has been saved.` });
+      }
+    }
+  }
+  return { changes, reconciledTasks, warnings };
+}
+
+function closeFlock(farm, flockId, data, userId) {
   return runInImmediateTransaction(() => {
     const flock = getFlockOrFail(farm.id, flockId);
     if (flock.status !== 'active') throw closedFlockError();
@@ -342,20 +420,55 @@ function closeFlock(farm, flockId, data) {
       closureReason: data.closureReason,
       closureNotes: data.closureNotes ?? null,
     });
-    return getFlock(farm, flock.id);
+
+    const cancelledTasks = taskModel.cancelPendingForFlockFrom(flock.id, data.closureDate, {
+      userId,
+      reason: `Flock closed on ${data.closureDate}.`,
+    });
+
+    const cleanOutTask = createCleanOutTask(farm, flock, data.closureDate);
+    return { flock: getFlock(farm, flock.id), cancelledTasks, cleanOutTask };
   });
 }
 
 // Deletes a flock recorded by mistake
 function deleteFlock(farm, flockId) {
-  runInImmediateTransaction(() => {
+  return runInImmediateTransaction(() => {
     const flock = getFlockOrFail(farm.id, flockId);
     const movements = flockMovementModel.countForFlock(flock.id);
     if (movements > 1) {
       throw new AppError(409, `This flock has ${movements - 1} recorded movement${movements === 2 ? '' : 's'} besides ` +
         'the birds received, so it cannot be deleted. Its records must be kept.');
     }
+
+    const withHistory = taskModel.countWithHistoryForFlock(flock.id);
+    if (withHistory > 0) {
+      throw new AppError(409, `This flock has ${withHistory} task${withHistory === 1 ? '' : 's'} with history ` +
+        '(completed, or with review notes), so it cannot be deleted. Task history must be kept.');
+    }
+    // Production records (weights, eggs, feed, water) are history too.
+    const records = productionRecordModel.countAllForFlock(flock.id);
+    if (records > 0) {
+      throw new AppError(409, `This flock has ${records} production record${records === 1 ? '' : 's'} (weights, eggs, ` +
+        'feed or water), so it cannot be deleted. Production history must be kept.');
+    }
+    // Health observations are history too (the database also refuses it).
+    const observations = healthObservationModel.countForFlock(flock.id);
+    if (observations > 0) {
+      throw new AppError(409, `This flock has ${observations} health observation${observations === 1 ? '' : 's'}, so it ` +
+        'cannot be deleted. Health history must be kept.');
+    }
+
+    const expenses = expenseModel.countForFlock(flock.id);
+    if (expenses > 0) {
+      throw new AppError(409, `This flock has ${expenses} linked expense${expenses === 1 ? '' : 's'} (voided ones included), ` +
+        'so it cannot be deleted. Expense history must be kept. If the flock was recorded by mistake, remove the flock ' +
+        'link from each expense with a correction first.');
+    }
+    // Open and cancelled tasks without history are removed with the flock.
+    const removedTasks = taskModel.findForFarm(farm.id, { flockId: flock.id }).length;
     flockModel.remove(flock.id);
+    return { removedTasks };
   });
 }
 
