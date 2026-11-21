@@ -1,4 +1,4 @@
-// Input rules for flocks 
+// Defines validation rules for flocks and bird movements.
 const { body, query } = require('express-validator');
 const { ugandaToday, isIsoDate } = require('../utils/dates');
 
@@ -53,8 +53,6 @@ const createFlockRules = [
   optionalText('notes', 'Notes', 1000),
 ];
 
-// ---- Bird movements -----------------------------------------
-
 const MOVEMENT_DIRECTION = {
   mortality: 'out',
   culled: 'out',
@@ -97,7 +95,6 @@ const recordMovementRules = [
       return true;
     }),
 
-  // Effective date; today 
   body('movementDate')
     .optional()
     .custom((value) => {
@@ -124,13 +121,11 @@ const recordMovementRules = [
 
   optionalText('notes', 'Notes', 1000),
 
-  // Additional birds only
   body('birdsAgeWeeks')
     .optional({ values: 'null' })
     .isInt({ min: 0, max: 100 }).withMessage('Age of the additional birds must be a whole number of weeks.')
     .toInt(),
 
-  // Fields that belong to one movement type only.
   body().custom((value) => {
     const type = value && value.movementType;
     if (type === 'correction') {
@@ -149,8 +144,6 @@ const recordMovementRules = [
   }),
 ];
 
-// ---- Editing a flock  ----------------------------------------
-
 const PROTECTED_FIELDS = {
   poultryType: 'The poultry type of a flock cannot be changed.',
   birdsReceived: 'The birds received cannot be edited. Record a correction movement instead.',
@@ -165,7 +158,17 @@ const PROTECTED_FIELDS = {
   farmId: 'A flock cannot be moved to another farm.',
 };
 const EDITABLE_FIELDS = ['name', 'breedStrain', 'supplier', 'vaccinationNotes', 'notes',
-  'arrivalDate', 'startingStage', 'ageAtArrivalWeeks', 'malesReceived', 'femalesReceived'];
+  'arrivalDate', 'startingStage', 'ageAtArrivalWeeks', 'malesReceived', 'femalesReceived',
+  'firstEggDate', 'expectedSaleDate'];
+
+const milestoneDateRule = (field, label, { notInFuture }) => body(field)
+  .optional({ values: 'undefined' })
+  .custom((value) => {
+    if (value === null) throw new Error(`The ${label} cannot be removed. Send the correct date instead.`);
+    if (!isIsoDate(value)) throw new Error(`The ${label} must be a real date written as YYYY-MM-DD.`);
+    if (notInFuture && value > ugandaToday()) throw new Error(`The ${label} cannot be in the future.`);
+    return true;
+  });
 
 const updateFlockRules = [
   body().custom((value) => {
@@ -186,7 +189,6 @@ const updateFlockRules = [
   optionalText('supplier', 'Supplier or hatchery', 150),
   optionalText('vaccinationNotes', 'Vaccination notes', 1000),
   optionalText('notes', 'Notes', 1000),
-  // Arrival corrections (only while the flock has no later movements).
   body('arrivalDate')
     .optional()
     .custom((value) => {
@@ -210,10 +212,11 @@ const updateFlockRules = [
     .optional({ values: 'null' })
     .isInt({ min: 0, max: 1000000 }).withMessage('Females received must be a whole number, 0 or more.')
     .toInt(),
+  milestoneDateRule('firstEggDate', 'first-egg date', { notInFuture: true }),
+  milestoneDateRule('expectedSaleDate', 'expected sale date', { notInFuture: false }),
   optionalText('correctionReason', 'Correction reason', 500),
 ];
 
-// ---- Closing a flock ---------------------------------------
 const closeFlockRules = [
   body('closureDate')
     .custom((value) => {

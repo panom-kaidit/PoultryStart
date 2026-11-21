@@ -1,9 +1,10 @@
-// Input rules for daily tasks 
+// Defines validation rules for daily tasks.
 const { body, query } = require('express-validator');
 const { ugandaToday, isIsoDate } = require('../utils/dates');
 const { CUSTOM_TASK_TYPES } = require('../data/customTaskTypes');
 
 const TIME_SLOTS = ['morning', 'midday', 'evening', 'any'];
+const DISPLAY_STATUSES = ['pending', 'overdue', 'missed', 'completed', 'cancelled'];
 
 const optionalText = (field, label, max) => body(field)
   .optional({ values: 'null' })
@@ -11,7 +12,6 @@ const optionalText = (field, label, max) => body(field)
   .trim()
   .isLength({ max }).withMessage(`${label} must be at most ${max} characters.`);
 
-// A due date: a real date, today or later
 const dueDateRule = (chain) => chain.custom((value) => {
   if (!isIsoDate(value)) throw new Error('Due date must be a real date written as YYYY-MM-DD.');
   if (value < ugandaToday()) throw new Error('Due date cannot be in the past.');
@@ -24,7 +24,6 @@ const titleRule = (chain) => chain
   .notEmpty().withMessage('Title is required.')
   .isLength({ max: 150 }).withMessage('Title must be at most 150 characters.');
 
-// null = no flock / unassigned.
 const optionalId = (field, label) => body(field)
   .optional({ values: 'null' })
   .isInt({ min: 1 }).withMessage(`${label} must be a positive whole number.`)
@@ -43,7 +42,6 @@ const createTaskRules = [
   optionalId('assignedTo', 'Assignee'),
 ];
 
-// Fields that are never changed through an edit, with what to do instead.
 const PROTECTED_FIELDS = {
   status: 'Completing and reopening tasks are separate actions.',
   completedAt: 'Completing and reopening tasks are separate actions.',
@@ -96,8 +94,8 @@ const listTasksRules = [
     if (req.query.from && isIsoDate(req.query.from) && value < req.query.from) throw new Error('"to" cannot be before "from".');
     return true;
   }),
-  query('status').optional().isIn(['pending', 'completed', 'cancelled'])
-    .withMessage('Status filter must be "pending", "completed" or "cancelled".'),
+  query('status').optional().isIn(DISPLAY_STATUSES)
+    .withMessage(`Status filter must be one of: ${DISPLAY_STATUSES.join(', ')}.`),
   query('flockId').optional().isInt({ min: 1 }).withMessage('flockId must be a positive whole number.'),
   query('assignedTo').optional().custom((value) => {
     if (value === 'me' || value === 'unassigned' || /^[1-9]\d*$/.test(value)) return true;
@@ -105,4 +103,82 @@ const listTasksRules = [
   }),
 ];
 
-module.exports = { createTaskRules, updateTaskRules, cancelTaskRules, listTasksRules, TIME_SLOTS };
+const FLOCK_PATH = '/api/farms/:farmId/flocks/:flockId';
+const MORTALITY_FORM = `Record deaths in the flock's mortality form (POST ${FLOCK_PATH}/movements).`;
+const FEED_RECORDS = `Feed amounts belong in the flock's feed consumption records (POST ${FLOCK_PATH}/records/feed).`;
+const WATER_RECORDS = `Drinking-water amounts belong in the flock's drinking-water records (POST ${FLOCK_PATH}/records/water).`;
+const FEED_OR_WATER_RECORDS = `Feed and drinking-water amounts belong in the flock's feed or drinking-water records ` +
+  `(POST ${FLOCK_PATH}/records/feed or /records/water).`;
+const HEALTH_RECORDS = `Health notes belong in the flock's health observations (POST ${FLOCK_PATH}/records/health).`;
+const TEMPERATURE = 'PoultryStart Version 1 does not keep temperature records. Describe what you noticed in the task notes.';
+const EGG_RECORDS = `Egg numbers belong in the flock's egg collection records (POST ${FLOCK_PATH}/records/eggs).`;
+const WEIGHT_RECORDS = `Body weights belong in the flock's weight records (POST ${FLOCK_PATH}/records/weights).`;
+const MEASUREMENT_FIELDS = {
+  birdsLost: MORTALITY_FORM,
+  birdChange: MORTALITY_FORM,
+  mortality: MORTALITY_FORM,
+  deaths: MORTALITY_FORM,
+  deadBirds: MORTALITY_FORM,
+  quantity: FEED_OR_WATER_RECORDS,
+  unit: FEED_OR_WATER_RECORDS,
+  feedKg: FEED_RECORDS,
+  feedQuantity: FEED_RECORDS,
+  waterLitres: WATER_RECORDS,
+  waterQuantity: WATER_RECORDS,
+  temperature: TEMPERATURE,
+  healthObservation: HEALTH_RECORDS,
+  eggs: EGG_RECORDS,
+  eggsCollected: EGG_RECORDS,
+  eggCount: EGG_RECORDS,
+  crackedEggs: EGG_RECORDS,
+  floorEggs: EGG_RECORDS,
+  weight: WEIGHT_RECORDS,
+  weightKg: WEIGHT_RECORDS,
+  averageWeight: WEIGHT_RECORDS,
+  bodyWeight: WEIGHT_RECORDS,
+};
+const COMPLETION_FIELDS = ['notes', 'problemReported'];
+
+const completeTaskRules = [
+  body().custom((value) => {
+    const keys = Object.keys(value || {});
+    const measurements = keys.filter((key) => Object.hasOwn(MEASUREMENT_FIELDS, key));
+    if (measurements.length > 0) {
+      throw new Error(`Task completion does not record measurements (${measurements.join(', ')}). ` +
+        [...new Set(measurements.map((key) => MEASUREMENT_FIELDS[key]))].join(' '));
+    }
+    const unknown = keys.filter((key) => !COMPLETION_FIELDS.includes(key));
+    if (unknown.length > 0) {
+      throw new Error(`Unknown field${unknown.length === 1 ? '' : 's'}: ${unknown.join(', ')}. ` +
+        `Completing a task accepts only: ${COMPLETION_FIELDS.join(', ')}.`);
+    }
+    return true;
+  }),
+  optionalText('notes', 'Notes', 1000),
+  body('problemReported')
+    .optional()
+    .custom((value) => {
+      if (typeof value !== 'boolean') throw new Error('problemReported must be true or false.');
+      return true;
+    }),
+  body('notes').custom((value, { req }) => {
+    if (req.body.problemReported === true && (typeof value !== 'string' || value.trim() === '')) {
+      throw new Error('Describe the problem in notes when reporting a problem.');
+    }
+    return true;
+  }),
+];
+
+const reasonRule = (field, message, max) => body(field)
+  .isString().withMessage(message)
+  .trim()
+  .notEmpty().withMessage(message)
+  .isLength({ max }).withMessage(`${field} must be at most ${max} characters.`);
+
+const reopenTaskRules = [reasonRule('reason', 'Give a reason for reopening the task.', 500)];
+const reviewNoteRules = [reasonRule('note', 'Write the review note.', 1000)];
+
+module.exports = {
+  createTaskRules, updateTaskRules, cancelTaskRules, listTasksRules, completeTaskRules, reopenTaskRules, reviewNoteRules,
+  TIME_SLOTS, DISPLAY_STATUSES, MEASUREMENT_FIELDS,
+};
