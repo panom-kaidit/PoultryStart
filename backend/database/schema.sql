@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS flocks (
   updated_at         TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- FlockBirdMovement 
+-- FlockBirdMovement (begin)
 CREATE UNIQUE INDEX IF NOT EXISTS ux_flocks_id_farm ON flocks(id, farm_id);
 
 CREATE TABLE IF NOT EXISTS flock_bird_movements (
@@ -382,7 +382,7 @@ BEGIN
 END;
 -- DailyTaskSupport (end)
 
--- ProductionRecords :
+-- ProductionRecords (begin)
 CREATE TABLE IF NOT EXISTS weight_records (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
   farm_id          INTEGER NOT NULL,
@@ -557,7 +557,7 @@ WHEN EXISTS (SELECT 1 FROM farms WHERE id = OLD.farm_id)
 BEGIN SELECT RAISE(ABORT, 'Correction history cannot be deleted.'); END;
 -- ProductionRecords (end)
 
--- HealthObservations 
+-- HealthObservations (begin)
 CREATE TABLE IF NOT EXISTS health_observations (
   id                          INTEGER PRIMARY KEY AUTOINCREMENT,
   farm_id                     INTEGER NOT NULL,
@@ -622,7 +622,7 @@ WHEN EXISTS (SELECT 1 FROM farms WHERE id = OLD.farm_id)
 BEGIN SELECT RAISE(ABORT, 'Correction history cannot be deleted.'); END;
 -- HealthObservations (end)
 
--- Expenses
+-- Expenses (begin)
 CREATE TABLE IF NOT EXISTS farm_expenses (
   id                INTEGER PRIMARY KEY AUTOINCREMENT,
   farm_id           INTEGER NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
