@@ -1,0 +1,63 @@
+/* Flocks Management (js/pages/flocks-list.js) only. Every rule is scoped to .flocks*. */
+.flocks {
+  --green-700: #14532D;
+  --green-800: #104526;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.flocks-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; }
+.flocks-head .page-heading { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+.flocks-new {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 14px;
+  background: var(--green-700); color: #fff; font-size: 16px; font-weight: 700; text-decoration: none;
+}
+.flocks-new:hover { background: var(--green-800); color: #fff; }
+.flocks-body { display: flex; flex-direction: column; gap: 28px; }
+.flocks-body section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.flocks-section { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.flocks-note { margin: -6px 0 0; font-size: 14px; color: var(--muted); }
+.flocks-empty { margin: 0; padding: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; font-size: 15px; line-height: 1.45; color: var(--muted); }
+
+.flocks-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.flocks-grid > li { display: flex; min-width: 0; }
+.flocks-card {
+  flex: 1; display: flex; flex-direction: column; gap: 18px; padding: 20px; min-width: 0;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 18px; text-decoration: none; color: var(--text);
+}
+.flocks-card:hover { border-color: var(--green-300); color: var(--text); }
+.flocks-card:focus-visible, .flocks-add:focus-visible { outline: 3px solid #1B6B3A; outline-offset: 3px; }
+.flocks-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.flocks-card__name { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.flocks-card__meta { margin: 4px 0 0; font-size: 15px; color: var(--muted); }
+.flocks-badge { flex: none; padding: 5px 12px; border-radius: 999px; background: var(--green-50); color: var(--green-700); font-size: 14px; font-weight: 700; white-space: nowrap; }
+.flocks-card__stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; }
+.flocks-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.flocks-stat__label { font-size: 14px; font-weight: 600; color: var(--muted); }
+.flocks-stat__value { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.flocks-stat__extra { font-size: 16px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+.flocks-card .ui-stages__labels { font-size: 13px; }
+
+.flocks-add {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 180px; padding: 24px;
+  border: 2px dashed var(--border-check); border-radius: 18px; text-align: center; text-decoration: none; color: var(--text);
+}
+.flocks-add:hover { border-color: var(--green-700); background: var(--green-25); color: var(--text); }
+.flocks-add__icon { width: 52px; height: 52px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); color: var(--green-700); display: flex; align-items: center; justify-content: center; }
+.flocks-add__title { font-size: 19px; font-weight: 800; color: var(--green-700); }
+.flocks-add__text { font-size: 15px; color: var(--muted); }
+
+/* The table scrolls inside its own box on small screens; the page never does. */
+.flocks-table-wrap { position: relative; overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.flocks-table-wrap:focus-visible { outline: 3px solid #1B6B3A; outline-offset: 2px; }
+.flocks-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 16px; }
+.flocks-table th, .flocks-table td { padding: 16px 18px; text-align: left; border-top: 1px solid var(--divider); white-space: nowrap; }
+.flocks-table thead th { border-top: 0; background: #FAFAF7; font-size: 14px; font-weight: 700; color: var(--muted); }
+.flocks-table tbody th { font-weight: 800; }
+.flocks-table td:last-child { text-align: right; }
+.flocks-table a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; color: var(--green-700); text-underline-offset: 3px; }
+
+@media (min-width: 48em) {
+  .flocks-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 56.25em) {
+  .flocks-head .page-heading { font-size: 38px; }
+}

@@ -1,0 +1,104 @@
+/* Design tokens from the approved redesign (design/mockups). Components use only these. */
+@font-face { font-family: Inter; font-style: normal; font-weight: 400; font-display: swap; src: url("../fonts/inter-400.woff2") format("woff2"); }
+@font-face { font-family: Inter; font-style: normal; font-weight: 500; font-display: swap; src: url("../fonts/inter-500.woff2") format("woff2"); }
+@font-face { font-family: Inter; font-style: normal; font-weight: 600; font-display: swap; src: url("../fonts/inter-600.woff2") format("woff2"); }
+@font-face { font-family: Inter; font-style: normal; font-weight: 700; font-display: swap; src: url("../fonts/inter-700.woff2") format("woff2"); }
+@font-face { font-family: Inter; font-style: normal; font-weight: 800; font-display: swap; src: url("../fonts/inter-800.woff2") format("woff2"); }
+
+:root {
+  /* Colours */
+  --green-700: #1F6B3A;
+  --green-800: #174F2B;
+  --green-300: #9CC7A8;
+  --green-50: #E8F2EA;
+  --green-25: #F3F8F4;
+  --bg: #F6F5F0;
+  --surface: #FFFFFF;
+  --border: #E4E2DA;
+  --divider: #EEECE5;
+  --border-input: #CBC8BE;
+  --border-check: #B9B6AB;
+  --text: #17211B;
+  --text-2: #2B342E;
+  --muted: #59625B;
+  --nav-idle: #5A635C;
+  --amber-bg: #FFF4E0;
+  --amber-tile: #FFF7E8;
+  --amber-border: #E9B65C;
+  --amber-tile-border: #EFCB8A;
+  --amber-icon-bg: #FFF0D6;
+  --amber-text: #7A4A00;
+  --amber-icon: #8A5300;
+  --amber-ring: #D98A0B;
+  --red-bg: #FDECEA;
+  --red-border: #F0B4AA;
+  --red-title: #7E1F10;
+  --red-body: #5C1A0E;
+  --red-700: #9B2C1A;
+  --blue-bg: #E3ECF8;
+  --blue-text: #1E4F8F;
+  --blue-dot: #3B7DD8;
+
+  /* Type */
+  --font: Inter, system-ui, sans-serif;
+
+  /* Shape and size */
+  --r-btn: 14px;
+  --r-input: 12px;
+  --r-card: 16px;
+  --r-hero: 18px;
+  --r-chip: 22px;
+  --r-icon: 10px;
+  --r-pill: 999px;
+  --touch: 44px;
+  --h-btn: 54px;
+  --h-btn-2: 48px;
+  --h-input: 52px;
+  --pad-screen: 20px;
+  --pad-card: 16px;
+  --shadow-raised: 0 6px 14px rgba(31, 107, 58, .35);
+  --nav-height: 78px;
+  --sidebar-width: 280px;
+
+  /* Older names, kept so screens not yet rebuilt use the new palette. */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border-input);
+  --color-primary: var(--green-700);
+  --color-primary-hover: var(--green-800);
+  --color-on-primary: var(--surface);
+  --color-focus: var(--blue-text);
+  --color-success-bg: var(--green-50);
+  --color-success-border: var(--green-300);
+  --color-success-text: var(--green-800);
+  --color-warning-bg: var(--amber-bg);
+  --color-warning-border: var(--amber-border);
+  --color-warning-text: var(--amber-text);
+  --color-error-bg: var(--red-bg);
+  --color-error-border: var(--red-700);
+  --color-error-text: var(--red-title);
+  --color-info-bg: var(--blue-bg);
+  --color-info-border: var(--blue-text);
+  --color-info-text: var(--blue-text);
+  --color-planned-bg: var(--divider);
+  --color-planned-text: var(--text-2);
+  --font-family: var(--font);
+  --font-size-base: 1rem;
+  --font-size-small: 0.9375rem;
+  --font-size-h1: 1.75rem;
+  --font-size-h2: 1.0625rem;
+  --line-height: 1.45;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 32px;
+  --radius: var(--r-input);
+  --touch-target: var(--touch);
+  --content-width: 736px;
+  --nav-width: var(--sidebar-width);
+  --focus-ring: 3px solid var(--color-focus);
+}

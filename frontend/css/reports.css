@@ -1,0 +1,78 @@
+/* Reports (reports.js, report.js). Scoped to .reports, .report-*. Print rules for every page are in print.css. */
+.reports { --green-700: #14532D; --green-800: #104526; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.reports a { color: var(--green-700); font-weight: 700; text-underline-offset: 3px; }
+.reports .page-heading { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; overflow-wrap: anywhere; }
+.reports > .page-heading { font-size: 32px; }
+.reports .breadcrumbs { margin: 0; }
+.report-panel__intro { margin: 6px 0 0; font-size: 15px; line-height: 1.5; color: var(--muted); max-width: 70ch; }
+
+/* The catalogue */
+.report-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.reports .report-card { position: relative; min-width: 0; overflow-wrap: anywhere; display: flex; flex-direction: column; gap: 6px; padding: 18px 18px 18px 74px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 18px; }
+.reports .report-card:hover { border-color: var(--green-300); }
+.reports .report-card h2 { margin: 0; font-size: 18px; font-weight: 800; }
+.reports .report-card h2 a { color: var(--text); text-decoration: none; }
+.reports .report-card h2 a::after { content: ""; position: absolute; inset: 0; border-radius: 18px; }
+.reports .report-card h2 a:focus-visible { outline: none; }
+.reports .report-card:focus-within { outline: 3px solid #1B6B3A; outline-offset: 2px; }
+.reports .report-card p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--text-2); }
+.report-card__code { position: absolute; left: 18px; top: 18px; width: 40px; height: 40px; border-radius: 12px; background: var(--green-50); color: var(--green-700);
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+.reports .report-card .report-card__sub { font-weight: 700; color: var(--green-700); }
+
+/* One report: the menu and the panel */
+.reports-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
+.report-menu ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.report-menu a { display: flex; flex-direction: column; gap: 2px; min-height: 48px; padding: 8px 14px; border-radius: 12px; border: 1.5px solid var(--border-input);
+  background: var(--surface); text-decoration: none; white-space: nowrap; }
+.report-menu__title { font-size: 15px; font-weight: 700; color: var(--text); }
+.report-menu__sub { display: none; font-size: 14px; font-weight: 400; color: var(--muted); }
+.report-menu a:hover { border-color: var(--green-700); }
+.report-menu a[aria-current="page"] { background: var(--green-50); border-color: var(--green-700); box-shadow: inset 4px 0 0 var(--green-700); }
+.report-menu a[aria-current="page"] .report-menu__title { color: var(--green-700); font-weight: 800; }
+.report-panel { display: flex; flex-direction: column; gap: 16px; min-width: 0; padding: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; }
+.report-panel__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 16px; }
+.report-panel__head > div { flex: 1 1 260px; min-width: 0; }
+.report-print { min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--border-input); background: var(--surface); color: var(--green-700);
+  font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+.report-print:hover { background: var(--green-25); border-color: var(--green-700); }
+.report-controls { display: flex; flex-direction: column; gap: 12px; }
+.report-periods { display: flex; flex-wrap: wrap; gap: 8px; }
+.report-chip { min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1.5px solid var(--border-input); background: var(--surface); color: var(--text-2);
+  font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.report-chip:hover { border-color: var(--green-700); }
+.report-chip[aria-pressed="true"] { background: var(--green-50); border-color: var(--green-700); color: var(--green-700); font-weight: 700; }
+.report-chip[aria-pressed="true"]::before { content: "✓ "; }
+.reports .filter-form { margin: 0; padding: 14px; background: var(--bg); border: 0; border-radius: 14px; box-shadow: none; }
+.reports .filter-form .field { margin: 0; }
+.reports .filter-form .field__hint, .reports .filter-form > div[aria-live] { grid-column: 1 / -1; margin: 0; }
+.report-panel .card { box-shadow: none; }
+.report-figures { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.report-figure { padding: 12px 14px; border-radius: 14px; background: var(--bg); min-width: 0; }
+.report-figure dt { margin: 0; font-size: 14px; font-weight: 600; color: var(--muted); overflow-wrap: anywhere; }
+.report-figure dd { margin: 2px 0 0; font-size: 26px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+.report-eggs { display: flex; flex-direction: column; gap: 12px; }
+.report-eggs h2 { margin: 0; font-size: 20px; font-weight: 800; }
+.report-eggs .ui-bars__bar { background: #9BC8A8; }
+
+@media (min-width: 48em) {
+  .report-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .report-panel { padding: 24px; }
+}
+@media (min-width: 64em) {
+  .reports-layout { grid-template-columns: 260px minmax(0, 1fr); }
+  .report-menu { position: sticky; top: 16px; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; }
+  .report-menu ul { flex-direction: column; gap: 2px; overflow: visible; padding: 0; }
+  .report-menu a { border: 0; white-space: normal; padding: 10px 14px; }
+  .report-menu__sub { display: block; }
+  .reports .page-heading { font-size: 30px; }
+  .reports > .page-heading { font-size: 40px; }
+}
+@media (min-width: 75em) {
+  .report-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* The filter form inside the report panel: columns that never push past the panel (date fields have a wide minimum). */
+.reports .filter-form { grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); }
+.reports .filter-form .field, .reports .filter-form .input, .reports .filter-form .select { min-width: 0; max-width: 100%; }
+.reports .filter-form .button-row { grid-column: 1 / -1; margin: 0; }

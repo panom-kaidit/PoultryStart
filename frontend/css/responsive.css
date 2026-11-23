@@ -1,0 +1,77 @@
+/* Wider screens. The base styles are for phones (mobile first). */
+
+@media (min-width: 37.5em) {
+  .details { grid-template-columns: minmax(10rem, 14rem) 1fr; }
+  .details dd { margin-bottom: var(--space-1); }
+}
+
+/* The sidebar is for 900px and wider; below that the top bar and the bottom nav are used. */
+.sidebar { display: none; }
+
+/* 900px and wider: the sidebar (farm selector, Record today, destinations, user) replaces the bottom nav. */
+@media (min-width: 56.25em) {
+  .app-root:not(.app-root--bare) { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); }
+  .app-root:not(.app-root--bare) > .site-nav { display: none; }
+  .app-root:not(.app-root--bare) .top-bar { display: none; }
+
+  .sidebar {
+    --green-700: #14532D;
+    --green-800: #104526;
+    position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 14px; padding: 20px 16px;
+    background: var(--surface); border-right: 1px solid var(--border);
+  }
+  .sidebar__brand { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 4px; font-size: 19px; font-weight: 800; letter-spacing: -0.01em; color: var(--text); text-decoration: none; }
+  .sidebar__brand:hover { color: var(--text); }
+  .sidebar__mark { flex: none; width: 36px; height: 36px; border-radius: 10px; background: var(--green-700); color: #fff; display: flex; align-items: center; justify-content: center; }
+
+  .farm-select__wrap { position: relative; }
+  .farm-select {
+    display: flex; align-items: center; gap: 8px; width: 100%; min-height: 56px; padding: 8px 12px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px; cursor: pointer;
+    font-family: inherit; text-align: left; color: var(--text);
+  }
+  .farm-select:hover { border-color: var(--border-input); }
+  .farm-select__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .farm-select__name { font-size: 16px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .farm-select__meta { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .farm-select__panel {
+    position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; right: 0; max-height: 60vh; overflow-y: auto;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 10px 24px rgba(23, 33, 27, .12); padding: 6px;
+  }
+  .farm-select__panel ul { list-style: none; margin: 0; padding: 0; }
+  .farm-select__panel a { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; text-decoration: none; color: var(--text); }
+  .farm-select__panel a:hover, .farm-select__panel a[aria-current="true"] { background: var(--green-50); }
+  .farm-select__more { display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px 4px; border-top: 1px solid var(--divider); margin-top: 4px; }
+  .farm-select__more a { display: inline-flex; padding: 6px 0; font-size: 14px; font-weight: 700; color: var(--green-700); }
+  .farm-select__note { margin: 8px 10px; font-size: 14px; color: var(--muted); }
+
+  .sidebar__record {
+    display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border-radius: 14px;
+    background: var(--green-700); color: #fff; font-size: 16px; font-weight: 700; text-decoration: none; box-shadow: 0 6px 14px rgba(20, 83, 45, .3);
+  }
+  .sidebar__record:hover, .sidebar__record[aria-current="page"] { background: var(--green-800); color: #fff; }
+  .sidebar__nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .sidebar__item {
+    display: flex; align-items: center; gap: 14px; min-height: 48px; padding: 0 14px; border-radius: 12px;
+    font-size: 16px; font-weight: 600; color: var(--text-2); text-decoration: none;
+  }
+  .sidebar__item:hover { background: var(--green-25); color: var(--text); }
+  .sidebar__item[aria-current="page"] { background: var(--green-50); color: var(--green-700); font-weight: 700; }
+  .sidebar__user { margin-top: auto; display: flex; align-items: center; gap: 10px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .sidebar__avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--green-700); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+  .sidebar__who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .sidebar__name { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sidebar__role { font-size: 13px; color: var(--muted); }
+  .sidebar__logout { flex: none; min-height: 44px; padding: 0 6px; border: 0; background: transparent; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 700; color: var(--red-700); }
+  .sidebar__logout:hover { text-decoration: underline; }
+
+  .content { max-width: 736px; margin: 0 auto; padding: 32px var(--pad-screen) 48px; }
+  .content--bare { max-width: 560px; }
+  .content--wide { max-width: 1200px; padding: 32px 28px 56px; }
+  .content--wide .ui-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: 75em) {
+  .content--wide { padding: 40px 40px 56px; }
+}

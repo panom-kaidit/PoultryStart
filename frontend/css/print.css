@@ -1,0 +1,70 @@
+/* Printing: only the page content, in black on white. */
+.site-nav,
+.skip-link,
+.button,
+.button-row {
+  display: none !important;
+}
+
+body {
+  background: #ffffff;
+  color: #000000;
+}
+
+.content {
+  max-width: none;
+  padding: 0;
+}
+
+.card,
+.alert {
+  border-color: #000000;
+  break-inside: avoid;
+}
+
+a {
+  color: #000000;
+}
+
+/* Redesign shell and pages: print only the report or page itself. */
+.sidebar,
+.top-bar,
+.skip-link,
+.report-menu,
+.report-controls,
+.report-print,
+.money-tools,
+.money-link,
+.money-btn,
+.breadcrumbs {
+  display: none !important;
+}
+
+.app-root,
+.app-body,
+.content,
+.content--wide {
+  display: block !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.reports-layout {
+  display: block !important;
+}
+
+.report-panel,
+.money-card {
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+.table-wrap {
+  overflow: visible !important;
+}
+
+.report-figure,
+.data-table tr {
+  break-inside: avoid;
+}

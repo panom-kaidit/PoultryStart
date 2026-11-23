@@ -1,0 +1,131 @@
+/* Today (js/pages/today.js) only. Every rule is scoped to .today*. */
+.today {
+  --green-700: #14532D;
+  --green-800: #104526;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.today a { color: var(--green-700); font-weight: 700; text-underline-offset: 3px; }
+.today a:hover { color: var(--green-800); }
+.today-head { display: flex; flex-direction: column; gap: 4px; }
+.today-head .page-heading { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+.today-lead { margin: 0; font-size: 16px; line-height: 1.45; color: var(--muted); }
+.today-muted { margin: 0; font-size: 15px; line-height: 1.45; color: var(--muted); }
+.today-note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--muted); }
+.today-strong { font-size: 15px; font-weight: 700; }
+.today-links { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+.today-links a, .today-linkbtn { display: inline-flex; align-items: center; min-height: 44px; font-size: 15px; }
+.today-linkbtn { padding: 0; border: 0; background: transparent; cursor: pointer; font-family: inherit; font-weight: 700; color: var(--green-700); }
+.today-linkbtn:hover { text-decoration: underline; }
+
+.today-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
+.today-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.today-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.today-card h2 { margin: 0; font-size: 19px; font-weight: 800; }
+.today-card__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; }
+.today-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px; border-radius: 12px; background: var(--green-700); color: #fff !important; font-size: 16px; font-weight: 700; text-decoration: none; }
+.today-btn:hover { background: var(--green-800); }
+.today-btn--soft { align-self: flex-start; background: var(--green-50); color: var(--green-700) !important; }
+.today-btn--soft:hover { background: #DCEFE2; }
+
+/* ---- New farm ---- */
+.today-start { padding: 0; gap: 0; overflow: hidden; }
+.today-start > .today-card__head { padding: 18px 20px; border-bottom: 1px solid var(--divider); }
+.today-progress { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 700; }
+.today-progress .ui-progress { width: 140px; }
+.today-steps { list-style: none; margin: 0; padding: 0; }
+.today-step { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 14px; padding: 18px 20px; border-top: 1px solid var(--divider); }
+.today-step:first-child { border-top: 0; }
+.today-step.is-current { background: var(--green-25); }
+.today-step__marker {
+  flex: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800; background: var(--divider); color: var(--muted);
+}
+.today-step.is-done .today-step__marker, .today-step.is-current .today-step__marker { background: var(--green-700); color: #fff; }
+.today-step:not(.is-done):not(.is-current):nth-child(2) .today-step__marker { background: var(--amber-icon-bg); color: var(--amber-icon); }
+.today-step__body { flex: 1 1 220px; min-width: 0; padding-top: 5px; }
+.today-step__title { margin: 0; font-size: 17px; font-weight: 700; }
+.today-step.is-done .today-step__title { color: var(--muted); text-decoration: line-through; font-weight: 600; }
+.today-step__text { margin: 4px 0 0; font-size: 15px; line-height: 1.45; color: var(--text-2); }
+.today-step:not(.is-current):not(.is-done):last-child .today-step__title { color: var(--muted); font-weight: 600; }
+.today-step__link { flex: none; align-self: center; min-height: 44px; display: inline-flex; align-items: center; margin-left: 48px; }
+.today-step > .today-btn { flex: none; align-self: center; margin-left: 48px; }
+
+.today-readiness { flex-direction: row; align-items: center; gap: 18px; }
+.today-readiness .ui-ring { width: 84px; height: 84px; }
+.today-readiness .ui-ring__text { font-size: 18px; }
+.today-readiness--ready .ui-ring circle:last-child { stroke: var(--green-700); }
+.today-readiness__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.today-readiness__text h2 { font-size: 18px; }
+
+.today-articles { padding: 0; gap: 0; overflow: hidden; }
+.today-articles h2 { padding: 16px 18px 10px; font-size: 17px; }
+.today-articles ul { list-style: none; margin: 0; padding: 0; }
+.today-articles li a { display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-top: 1px solid var(--divider); text-decoration: none; color: var(--text) !important; }
+.today-articles li a:hover { background: var(--green-25); }
+.today-articles__icon { flex: none; width: 40px; height: 40px; border-radius: 10px; background: var(--green-50); color: var(--green-700); display: flex; align-items: center; justify-content: center; }
+.today-articles__title { display: block; font-size: 16px; font-weight: 700; }
+.today-articles__meta { display: block; font-size: 14px; font-weight: 400; color: var(--muted); }
+
+/* ---- Running farm ---- */
+.today-flocks { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+.today-flocks__chip { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--border-input); background: var(--surface); color: var(--text-2) !important; font-weight: 600 !important; text-decoration: none; }
+.today-flocks__chip[aria-current="true"] { background: var(--green-50); border-color: var(--green-700); color: var(--green-700) !important; }
+.today-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.today-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.today-tile p { margin: 0; }
+.today-tile__label { font-size: 14px; font-weight: 600; color: var(--muted); }
+.today-tile__value { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; overflow-wrap: anywhere; }
+.today-tile__sub { font-size: 13px; line-height: 1.4; color: var(--muted); }
+.today-tile--warning { background: var(--amber-tile); border-color: var(--amber-tile-border); }
+.today-tile--warning .today-tile__label, .today-tile--warning .today-tile__value { color: var(--amber-text); }
+.today-tile--warning .today-tile__value { font-size: 20px; padding: 4px 0 2px; }
+.today-tile__action { display: inline-flex; align-items: center; min-height: 32px; font-size: 14px; }
+
+.today-tasks .ui-progress { height: 8px; border-radius: 4px; }
+.today-slots { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); }
+.today-tasklist { list-style: none; margin: 0 -18px; padding: 0; }
+.today-tasklist a { display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-top: 1px solid var(--divider); text-decoration: none; color: var(--text) !important; font-weight: 400 !important; }
+.today-tasklist a:hover { background: var(--green-25); }
+.today-task__circle { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border-check); }
+.today-task__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.today-task__title { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.today-task__meta { font-size: 14px; color: var(--muted); }
+.today-done { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 700; color: var(--green-700); }
+
+.today-advice__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.today-advice__item { display: flex; gap: 12px; }
+.today-advice__icon { flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--amber-icon-bg); color: var(--amber-icon); display: flex; align-items: center; justify-content: center; }
+.today-advice__item--urgent .today-advice__icon { background: var(--red-bg); color: var(--red-700); }
+.today-advice__item--routine .today-advice__icon, .today-advice__item--info .today-advice__icon { background: var(--green-50); color: var(--green-700); }
+.today-advice__priority { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.today-advice__item h3 { margin: 2px 0 4px; font-size: 16px; font-weight: 700; }
+.today-advice__item p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--text-2); }
+
+.today-bars { display: flex; align-items: flex-end; gap: 8px; height: 140px; }
+.today-bars__col { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.today-bars__value { font-size: 12px; font-weight: 700; color: var(--text-2); }
+.today-bars__col.is-missing .today-bars__value { color: var(--muted); padding-bottom: 6px; border-bottom: 2px dashed var(--border-check); width: 100%; text-align: center; }
+.today-bars__bar { width: 100%; border-radius: 6px 6px 2px 2px; background: var(--green-300); }
+.today-bars__bar.is-latest { background: var(--green-700); }
+.today-bars__days { display: flex; gap: 8px; }
+.today-bars__days span { flex: 1; text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); }
+
+.today-quick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.today-quick__btn { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); color: var(--text) !important; font-size: 15px; text-decoration: none; }
+.today-quick__btn:hover { border-color: var(--green-700); }
+
+@media (min-width: 56.25em) {
+  .today-head .page-heading { font-size: 38px; }
+  .today-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .today-tile__value { font-size: 34px; }
+  .today-card { padding: 22px; }
+  .today-tasklist { margin: 0 -22px; }
+  .today-tasklist a { padding: 14px 22px; }
+}
+
+/* Wide screens: the side column next to the main card (as in the reference). */
+@media (min-width: 75em) {
+  .today--new .today-grid { grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: 24px; }
+  .today--running .today-grid { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 24px; }
+  .today-step__link, .today-step > .today-btn { margin-left: 0; }
+}
