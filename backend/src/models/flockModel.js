@@ -173,8 +173,6 @@ function findArrivalCorrections(flockId) {
 
 // ---- Milestone history (table flock_milestone_changes) ------------------
 
-const MILESTONES = Object.freeze(['first_egg_date', 'expected_sale_date']);
-
 function logMilestoneChange(flockId, { milestone, fromValue = null, toValue, reason = null, changedBy = null }) {
   getDb()
     .prepare(
@@ -213,5 +211,5 @@ function milestoneVersion(flockId, milestone) {
 
 module.exports = {
   create, findById, findByIdForFarm, findAllForFarm, update, remove, logArrivalCorrection, findArrivalCorrections,
-  MILESTONES, logMilestoneChange, findMilestoneChanges, milestoneVersion,
+  logMilestoneChange, findMilestoneChanges, milestoneVersion,
 };

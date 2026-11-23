@@ -5,7 +5,6 @@ const RECORD_TYPES = Object.freeze({
   feed: { path: 'feed', label: 'Feed consumption record', table: 'feed_consumption_records' },
   water: { path: 'water', label: 'Drinking-water consumption record', table: 'water_consumption_records' },
 });
-const TYPE_OF_PATH = Object.freeze(Object.fromEntries(Object.entries(RECORD_TYPES).map(([type, t]) => [t.path, type])));
 
 const FEED_STAGES = Object.freeze({
   broiler: ['starter', 'grower', 'finisher', 'other', 'unknown'],
@@ -40,6 +39,6 @@ const ACTUAL_RECORDS_NOTE = 'These are the quantities recorded on this farm. Pou
   'research estimates and does not compare them with targets.';
 
 module.exports = {
-  RECORD_TYPES, TYPE_OF_PATH, FEED_STAGES, COLLECTION_PERIODS, EGG_CATEGORIES, MEASUREMENT_METHODS,
+  RECORD_TYPES, FEED_STAGES, COLLECTION_PERIODS, EGG_CATEGORIES, MEASUREMENT_METHODS,
   WEIGHT_UNITS, FEED_UNITS, WATER_UNITS, LIMITS, MAX_RANGE_DAYS, DEFAULT_RANGE_DAYS, ACTUAL_RECORDS_NOTE,
 };

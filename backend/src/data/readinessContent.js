@@ -2,7 +2,6 @@
 
 const AREAS = ['housing', 'equipment', 'feed', 'water', 'other'];
 const ANSWERS = ['yes', 'no', 'partly'];
-const ALL_STARTING_STAGES = ['day_old', 'pullet', 'point_of_lay'];
 const OLDER_LAYERS = ['pullet', 'point_of_lay'];
 
 // Deadlines. ageWeeks = the bird age by which it must be in place; a flock
@@ -143,7 +142,6 @@ module.exports = {
   AREAS,
   ANSWERS,
   NEEDED_BY,
-  ALL_STARTING_STAGES,
   READINESS_QUESTIONS,
   DEFAULT_CHECKLIST,
   defaultChecklistFor,
