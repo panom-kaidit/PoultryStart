@@ -1,0 +1,82 @@
+/* Flock hub (js/pages/flock-detail.js) only. Every rule is scoped to .hub*. */
+.hub {
+  --green-700: #14532D;
+  --green-800: #104526;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.hub-head { display: flex; flex-direction: column; gap: 12px; }
+.hub-crumbs { font-size: 15px; color: var(--muted); }
+.hub-crumbs a { font-weight: 700; color: var(--green-700); text-underline-offset: 3px; }
+.hub-titlerow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; }
+.hub-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-width: 0; }
+.hub-title .page-heading { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.hub-badge { padding: 6px 14px; border-radius: 999px; background: var(--green-50); color: var(--green-700); font-size: 15px; font-weight: 700; white-space: nowrap; }
+.hub-badge--closed { background: var(--divider); color: var(--text-2); }
+.hub-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.hub-btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px; border-radius: 14px;
+  background: var(--green-700); color: #fff; font-size: 16px; font-weight: 700; text-decoration: none; border: 1.5px solid var(--green-700);
+}
+.hub-btn:hover { background: var(--green-800); color: #fff; }
+.hub-btn--secondary { background: var(--surface); color: var(--green-700); border-color: var(--border-input); }
+.hub-btn--secondary:hover { background: var(--green-25); color: var(--green-800); border-color: var(--green-700); }
+.hub-btn--block { display: flex; width: 100%; }
+.hub-meta { margin: 0; font-size: 16px; color: var(--muted); }
+.hub-stages { max-width: 760px; }
+.hub-closed { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--divider); font-size: 15px; color: var(--text-2); }
+
+.hub-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.hub-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hub-tile p { margin: 0; }
+.hub-tile__label { font-size: 14px; font-weight: 600; color: var(--muted); }
+.hub-tile__value { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.hub-tile--warning { background: var(--amber-tile); border-color: var(--amber-tile-border); }
+.hub-tile--warning .hub-tile__label, .hub-tile--warning .hub-tile__value { color: var(--amber-text); }
+.hub-tile--warning .hub-tile__value { font-size: 20px; padding-top: 4px; }
+.hub-tile__action { display: inline-flex; align-items: center; min-height: 32px; font-size: 14px; font-weight: 700; color: var(--green-700); }
+
+.hub .ui-tabs { padding: 0; gap: 4px; margin-top: 8px; }
+.hub .ui-tab { font-size: 16px; padding: 0 16px; min-height: 48px; }
+.hub-panel { min-width: 0; }
+.hub-panel:focus { outline: none; }
+.hub-stack { display: flex; flex-direction: column; gap: 0; }
+.hub-overview { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.hub-main, .hub-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.hub-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.hub-card h2 { margin: 0; font-size: 19px; font-weight: 800; }
+.hub-card a, .hub-link { font-weight: 700; color: var(--green-700); text-underline-offset: 3px; }
+.hub-card__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+.hub-muted { margin: 0; font-size: 15px; line-height: 1.45; color: var(--muted); }
+.hub-note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--muted); }
+.hub-linkrow { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.hub-linkrow a { display: inline-flex; align-items: center; min-height: 44px; }
+.hub-link { display: inline-flex; align-items: center; min-height: 44px; }
+
+.hub-bars { display: flex; align-items: flex-end; gap: 4px; height: 170px; }
+.hub-bars__col { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.hub-bars__value { font-size: 11px; font-weight: 700; color: var(--text-2); white-space: nowrap; }
+.hub-bars__col.is-missing .hub-bars__value { color: var(--muted); width: 100%; text-align: center; padding-bottom: 4px; border-bottom: 2px dashed var(--border-check); }
+.hub-bars__bar { width: 100%; border-radius: 5px 5px 1px 1px; background: var(--green-300); }
+.hub-bars__bar.is-latest { background: var(--green-700); }
+.hub-bars__ends { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--muted); }
+
+.hub-coming ul, .hub-advice ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.hub-coming li a { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600 !important; color: var(--text) !important; text-decoration: none; }
+.hub-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--green-700); }
+.hub-advice__item { display: flex; gap: 10px; align-items: flex-start; }
+.hub-advice__item .hub-dot { margin-top: 6px; background: var(--amber-ring); }
+.hub-advice__item--urgent .hub-dot { background: var(--red-700); }
+.hub-advice__item--routine .hub-dot, .hub-advice__item--info .hub-dot { background: var(--green-700); }
+.hub-advice__item p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--text-2); }
+.hub-advice__item .hub-advice__title { font-weight: 700; color: var(--text); }
+.hub-advice__item a { display: inline-flex; align-items: center; min-height: 40px; }
+
+@media (min-width: 48em) {
+  .hub-tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+}
+@media (min-width: 56.25em) {
+  .hub-title .page-heading { font-size: 40px; }
+}
+@media (min-width: 75em) {
+  .hub-overview { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 24px; }
+}
