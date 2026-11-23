@@ -314,7 +314,7 @@
   color: var(--color-muted);
 }
 
-/* ---- F2: danger buttons, dialogs, text areas, section tabs, lists ---- */
+/* ---- Danger buttons, dialogs, text areas, section tabs, lists ---- */
 .button--danger {
   background: var(--color-error-border);
   border-color: var(--color-error-border);
@@ -485,7 +485,7 @@ textarea.input {
   margin-top: var(--space-2);
 }
 
-/* ---- F3: flocks ---- */
+/* ---- Flocks ---- */
 .big-number {
   margin: 0 0 var(--space-3);
   font-size: 1.0625rem;
@@ -510,7 +510,7 @@ textarea.input {
   font-weight: 700;
 }
 
-/* ---- F4: tasks ---- */
+/* ---- Tasks ---- */
 .task-toolbar {
   display: grid;
   gap: var(--space-3);
@@ -547,7 +547,7 @@ textarea.input {
   }
 }
 
-/* ---- F5: production records ---- */
+/* ---- Production records ---- */
 .breadcrumbs ol {
   list-style: none;
   display: flex;
@@ -594,7 +594,7 @@ textarea.input {
   }
 }
 
-/* ---- F6: health observations ------------------------------------------ */
+/* ---- Health observations ---- */
 
 /* The disclaimer stays readable at every width and is never hidden. */
 .disclaimer {
@@ -616,7 +616,7 @@ textarea.input {
   overflow-wrap: anywhere;
 }
 
-/* ---- F7: expenses ------------------------------------------------------ */
+/* ---- Expenses ---- */
 
 .expense-card {
   display: grid;
@@ -673,7 +673,7 @@ textarea.input {
   margin: 0 0 var(--space-2);
 }
 
-/* ---- F8: guidance and the Advisor --------------------------------------- */
+/* ---- Guidance and the Advisor ---- */
 
 /* Evidence labels: a code in a bordered box; the meaning is in the text beside
    it or in its accessible name, never in colour alone. */
@@ -771,7 +771,7 @@ textarea.input {
   padding: 0;
 }
 
-/* ---- F9: dashboard and reports ------------------------------------------ */
+/* ---- Dashboard and reports ---- */
 
 .dashboard-grid {
   display: grid;
@@ -847,9 +847,7 @@ textarea.input {
   font-weight: 600;
 }
 
-/* =====================================================================
-   Redesign components (design/mockups). Values copied from the mockups.
-   ===================================================================== */
+/* ---- Redesign components (values from design/mockups) ---- */
 
 /* Back link */
 .ui-back { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; font-weight: 600; font-size: 15px; text-decoration: none; color: var(--green-700); align-self: flex-start; }
@@ -1089,7 +1087,7 @@ a.ui-event:hover { background: var(--green-25); color: var(--text); }
 .profile-card__meta { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
 .more-screen { gap: 12px; }
 
-/* Older shared classes on the new tokens (until each screen is rebuilt). */
+/* Older shared classes on the new tokens. */
 .card { border-color: var(--border); border-radius: var(--r-card); }
 .button { min-height: var(--h-btn-2); border-radius: var(--r-input); font-weight: 700; font-family: var(--font); }
 .input, .select { min-height: var(--h-input); border: 1.5px solid var(--border-input); border-radius: var(--r-input); font-family: var(--font); }

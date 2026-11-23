@@ -1,0 +1,159 @@
+/* Log in and Create account pages only (js/pages/login.js, register.js). Every rule is scoped to .login-*. */
+.login-page {
+  --login-green: #14532D;        /* primary dark green: panel, button, links */
+  --login-green-deep: #104526;   /* hover and pressed */
+  --login-green-mid: #1B6B3A;    /* focus ring */
+  --login-green-soft: #DCEFE2;   /* soft accents on the dark panel */
+  --login-bg: #F7F7F2;
+  --login-text: #17211B;
+  --login-muted: #59625B;
+  --login-border: #CBC8BE;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--login-bg);
+  color: var(--login-text);
+  font-family: var(--font);
+}
+
+/* ---- Brand panel (a compact band on phones) ---- */
+.login-brand {
+  background: var(--login-green);
+  color: #FFFFFF;
+  padding: 20px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.login-brand__logo { display: flex; align-items: center; gap: 12px; }
+.login-brand__mark {
+  flex: none; width: 36px; height: 36px; border-radius: 10px;
+  background: #FFFFFF; color: var(--login-green);
+  display: flex; align-items: center; justify-content: center;
+}
+.login-brand__mark .icon { width: 20px; height: 20px; }
+.login-brand__name { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+.login-brand__headline { margin: 0; font-size: 24px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; }
+.login-brand__benefits { display: none; }
+.login-steps { display: none; }
+.login-brand__footer { display: none; }
+
+/* ---- Form side ---- */
+.login-main { flex: 1; display: flex; justify-content: center; padding: 28px 20px 40px; }
+.login-panel { width: 100%; max-width: 420px; display: flex; flex-direction: column; }
+.login-panel .page-heading {
+  margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; color: var(--login-text);
+}
+.login-lead { margin: 6px 0 0; font-size: 17px; line-height: 1.45; color: var(--login-muted); }
+.login-panel > .alert { margin: 20px 0 0; }
+.login-summary:not(:empty) { margin-top: 20px; }
+.login-summary .alert { margin: 0; }
+
+.login-form { display: flex; flex-direction: column; gap: 20px; margin-top: 28px; }
+.login-field { margin: 0; }
+.login-label { display: block; margin-bottom: 8px; font-size: 15px; font-weight: 600; color: var(--login-text); }
+.login-input-wrap { position: relative; }
+.login-input {
+  display: block; width: 100%; height: 52px; padding: 0 16px;
+  border: 1.5px solid var(--login-border); border-radius: 12px; background: #FFFFFF;
+  font-family: inherit; font-size: 17px; color: var(--login-text);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.login-input::placeholder { color: #6B726C; }
+.login-input:hover { border-color: #A9A69B; }
+.login-input:focus { outline: none; border-color: var(--login-green); box-shadow: 0 0 0 3px var(--login-green-soft); }
+.login-input[aria-invalid="true"] { border-color: #9B2C1A; }
+.login-input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px #FDECEA; }
+.login-input--password { padding-right: 84px; }
+.login-hint { margin: 6px 0 0; font-size: 14px; color: var(--login-muted); }
+.login-required { margin: 10px 0 0; font-size: 14px; color: var(--login-muted); }
+.login-summary__next { margin: 10px 0 0; font-size: 15px; }
+.login-summary__next a { font-weight: 700; color: var(--login-green); }
+.login-field .field__error { margin: 6px 0 0; font-size: 14px; font-weight: 600; color: #9B2C1A; }
+
+.login-toggle {
+  position: absolute; right: 4px; top: 4px; height: 44px; min-width: 64px; padding: 0 12px;
+  border: 0; border-radius: 9px; background: transparent; cursor: pointer;
+  font-family: inherit; font-size: 15px; font-weight: 700; color: var(--login-green);
+}
+.login-toggle:hover { background: var(--login-green-soft); }
+.login-toggle:focus-visible { outline: 3px solid var(--login-green-mid); outline-offset: -3px; }
+
+.login-submit {
+  display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px; margin-top: 4px;
+  border: 0; border-radius: 12px; background: var(--login-green); color: #FFFFFF; cursor: pointer;
+  font-family: inherit; font-size: 17px; font-weight: 700;
+  transition: background-color .15s ease;
+}
+.login-submit:hover:not(:disabled) { background: var(--login-green-deep); }
+.login-submit:active:not(:disabled) { background: #0C3A1F; }
+.login-submit:focus-visible { outline: 3px solid var(--login-green-mid); outline-offset: 3px; }
+.login-submit:disabled { cursor: progress; opacity: .8; }
+
+.login-register { margin: 24px 0 0; font-size: 16px; color: var(--login-muted); }
+.login-register a { font-weight: 700; color: var(--login-green); text-underline-offset: 3px; }
+.login-register a:hover { color: var(--login-green-deep); }
+.login-register a:focus-visible { outline: 3px solid var(--login-green-mid); outline-offset: 2px; border-radius: 4px; }
+
+/* Create account on phones: one more field than Log in, so a little tighter to fit without scrolling. */
+@media (max-width: 47.99em) {
+  .login-page--register .login-brand { padding: 16px 20px 18px; gap: 12px; }
+  .login-page--register .login-brand__headline { font-size: 21px; }
+  .login-page--register .login-main { padding-top: 20px; }
+  .login-page--register .login-panel .page-heading { font-size: 28px; }
+  .login-page--register .login-form { gap: 16px; margin-top: 20px; }
+  .login-page--register .login-label { margin-bottom: 6px; }
+}
+
+/* ---- Tablet and up: two sections side by side ---- */
+@media (min-width: 48em) {
+  .login-page { flex-direction: row; }
+  .login-brand {
+    flex: 0 0 44%; min-height: 100vh; padding: 40px 36px;
+    position: sticky; top: 0; align-self: flex-start; justify-content: space-between; gap: 32px;
+  }
+  .login-brand__mark { width: 44px; height: 44px; border-radius: 12px; }
+  .login-brand__mark .icon { width: 24px; height: 24px; }
+  .login-brand__name { font-size: 22px; }
+  .login-brand__middle { display: flex; flex-direction: column; gap: 28px; }
+  .login-brand__headline { font-size: 34px; line-height: 1.1; }
+  .login-brand__benefits { display: flex; flex-direction: column; gap: 18px; margin: 0; padding: 0; list-style: none; }
+  .login-brand__benefits li { display: flex; align-items: flex-start; gap: 12px; font-size: 16px; line-height: 1.45; }
+  .login-brand__check {
+    flex: none; width: 28px; height: 28px; margin-top: -2px; border-radius: 50%;
+    background: rgba(255, 255, 255, .18); color: #FFFFFF;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .login-brand__footer { display: block; margin: 0; font-size: 14px; color: var(--login-green-soft); }
+  .login-steps { display: flex; flex-direction: column; gap: 20px; margin: 0; padding: 0; list-style: none; }
+  .login-steps li { display: flex; align-items: flex-start; gap: 14px; }
+  .login-steps__number {
+    flex: none; width: 34px; height: 34px; border-radius: 50%; background: rgba(255, 255, 255, .18);
+    display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800;
+  }
+  .login-steps__text { display: flex; flex-direction: column; gap: 2px; font-size: 15px; line-height: 1.4; color: var(--login-green-soft); }
+  .login-steps__title { font-size: 17px; font-weight: 700; color: #FFFFFF; }
+  .login-main { align-items: center; padding: 48px 32px; }
+}
+
+/* ---- Desktop: 50 / 50, as in the reference ---- */
+@media (min-width: 64em) {
+  .login-brand { flex-basis: 50%; padding: 56px 64px; }
+  .login-brand__headline { font-size: 46px; line-height: 1.08; }
+  .login-brand__benefits { gap: 20px; }
+  .login-brand__benefits li { font-size: 18px; }
+  .login-brand__middle { gap: 36px; max-width: 540px; }
+  .login-brand__footer { font-size: 15px; }
+  .login-steps { gap: 24px; }
+  .login-steps__number { width: 36px; height: 36px; font-size: 16px; }
+  .login-steps__text { font-size: 16px; }
+  .login-steps__title { font-size: 19px; }
+  .login-panel .page-heading { font-size: 36px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-input, .login-submit { transition: none; }
+}
+
+/* The frame of the log in page: no padding or width limit (the page fills the screen). */
+.content-full:focus { outline: none; }
