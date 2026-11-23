@@ -1,6 +1,5 @@
 // Handles errors and sends consistent JSON responses.
 const AppError = require('../utils/AppError');
-const config = require('../config/env');
 
 // For URLs that do not match any route.
 function notFound(req, res, next) {
@@ -29,7 +28,7 @@ function errorHandler(err, req, res, next) {
   }
 
   // Log unexpected errors for the developer, but never send internal
-  if (statusCode === 500 && !config.isTest) {
+  if (statusCode === 500) {
     console.error(err);
   }
 

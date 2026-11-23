@@ -15,7 +15,7 @@ let db = null;
 function getDb() {
   if (db) return db;
 
-  const inMemory = config.dbPath === ':memory:'; // used by the automated tests
+  const inMemory = config.dbPath === ':memory:'; // DB_PATH=:memory: keeps the database in memory only
   const filePath = inMemory ? ':memory:' : path.resolve(BACKEND_ROOT, config.dbPath);
   if (!inMemory) fs.mkdirSync(path.dirname(filePath), { recursive: true });
 
