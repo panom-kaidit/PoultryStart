@@ -19,20 +19,18 @@ const TYPE = { broiler: 'Broilers', layer: 'Layers' };
 async function loadData(farm) {
   const flocksRequest = listFlocks(farm.id);
   const topicsRequest = getTopics().then((r) => r.data.stages).catch(() => null);
-  let today;
-  let stages = new Map();
+  const usesDashboard = canOpen(farm.myRole, 'dashboard');
+  const roleRequest = usesDashboard ? getDashboard(farm.id) : getAdvice(farm.id);
+  const [{ data }, { data: { flocks } }] = await Promise.all([roleRequest, flocksRequest]);
+  const today = data.date;
+  let stages;
   let deaths = null;
-  if (canOpen(farm.myRole, 'dashboard')) {
-    const { data } = await getDashboard(farm.id);
-    today = data.date;
+  if (usesDashboard) {
     stages = new Map(data.flocks.flocks.map((f) => [f.id, f]));
     deaths = new Map(data.mortality.flocks.map((m) => [m.flockId, m.netDeaths]));
   } else {
-    const { data } = await getAdvice(farm.id);
-    today = data.date;
     stages = new Map(data.flocks.filter((f) => f.status === 'active').map((f) => [f.id, f]));
   }
-  const { data: { flocks } } = await flocksRequest;
   const { active, closed } = splitFlocks(flocks);
   const eggs = new Map(await Promise.all(active.filter((f) => laying(f, today)).map((f) =>
     getSummary(farm.id, f.id, 'eggs', { from: today, to: today }).then((r) => [f.id, r.data.summary.days.find((d) => d.date === today) || null]))));
