@@ -13,6 +13,8 @@ const config = {
   dbPath: process.env.DB_PATH || 'database/poultrystart.db',
   bcryptRounds: Number(process.env.BCRYPT_ROUNDS) || 10,
   corsOrigin: process.env.CORS_ORIGIN || '*',
+  demoSeed: process.env.DEMO_SEED === 'true',
+  demoPassword: process.env.DEMO_PASSWORD || undefined,
 };
 
 // The server must not run without a secret for signing login tokens.
